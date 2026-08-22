@@ -18,10 +18,24 @@ admin-dashboard-dc821.web.app
 Guesthouse, Hotel, Apartment, School, Health
 
 ## PRICE CATEGORIES
-Budget, Mid-range, Premium, Luxury — dropdown selector on listing form. Exact numeric price optional.
+Budget, Mid-range, Premium, Luxury — dropdown selector. Exact numeric price optional.
 
 ## BUSINESS PAGES
-Standalone one-page business websites. Fields: business name, location, category, tagline, description, phone, WhatsApp, services, opening hours, directions, coordinates, hero image, FAQs, optional blog. Slug auto-generated as business-{location}-{name}. Location field is simple text input. Business pages link to same-location directories for internal linking.
+Standalone one-page business websites. Fields: business name, location, category, tagline, description, phone, WhatsApp, services, opening hours, directions, coordinates, hero image, FAQs, optional blog. Slug auto-generated as business-{location}-{name}.
+
+## REQUIRED FIELDS (MINIMAL)
+- Directory: Location name only
+- Listing: Business name only
+- Business page: Name and location only
+- Everything else optional — save and publish with partial data allowed
+
+## BUTTON LOCKING (ANTI DOUBLE-CLICK)
+All buttons disable themselves while their function is running:
+- Save buttons show "Saving..." and disable
+- Publish/Unpublish buttons show "Processing..." and disable
+- Delete buttons show "Deleting..." and disable
+- Publish All Changes shows "Publishing..." and disables
+- Prevents duplicate saves from double or triple clicks
 
 ## FOLDER STRUCTURE
 directory-dashboard/
@@ -32,11 +46,11 @@ directory-dashboard/
 ├── js/auth.js — Login, logout, auth state
 ├── js/utils.js — Slug generation, coordinate validation, phone formatting
 ├── js/form-engine.js — NICHE_FIELDS config, dynamic form renderer
-├── js/image-upload.js — Direct image upload (no Cloud Function), uploadAnyImage, uploadBusinessHero
-├── js/directories.js — Directory management
-├── js/listings.js — Listing form with draft support
-├── js/business.js — Business page management with FAQs
-├── js/publish.js — Publish button (Cloud Function proxy), build status
+├── js/image-upload.js — Direct image upload, uploadAnyImage, uploadBusinessHero
+├── js/directories.js — Directory management with button locking
+├── js/listings.js — Listing form with button locking
+├── js/business.js — Business page management with FAQ and button locking
+├── js/publish.js — Publish button with button locking, build status
 ├── functions/index.js — triggerPublish (GitHub dispatch)
 ├── firebase.json — Hosting config
 ├── firestore.rules — Security rules for directories and businesses
@@ -47,10 +61,10 @@ directory-dashboard/
 - Directory slugs auto-generated (niche + location + optional category tag)
 - Business slugs auto-generated (business-{location}-{name})
 - Dynamic listing form per niche (config-driven)
-- Draft mode: only business name required for listings
-- Draft mode for business pages: name, description, location required
+- Minimal required fields — save partial data freely
+- Button locking prevents duplicate saves
 - Price category dropdown
-- Direct photo upload (no Cloud Function, no polling, shows preview immediately)
+- Direct photo upload (no Cloud Function, immediate preview)
 - Coordinate validation against Kenya bounds
 - Per-listing FAQs, global FAQs, business FAQs
 - Blog editor
@@ -69,10 +83,10 @@ directory-dashboard/
 ## WORKFLOW
 1. Login at admin-dashboard-dc821.web.app
 2. Create directory (niche + location, slug auto-generates)
-3. Add listings (minimal for drafts, full for published)
+3. Add listings (name only required, fill rest as available)
 4. Upload photos (direct upload, immediate preview)
 5. Create business pages (name + location, slug auto-generates)
-6. Add FAQs and blog content to listings and businesses
-7. Save as draft or publish
+6. Add FAQs and blog content as needed
+7. Save as draft or publish — buttons lock during save
 8. Click Publish All Changes → triggers engine rebuild
 9. Content appears at directory-engine-7a41f.web.app

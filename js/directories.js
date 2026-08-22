@@ -1,22 +1,11 @@
 // Load directory list with Published/Drafts tabs
 function loadDirectoryList() {
   const content = document.getElementById('content');
-  content.innerHTML = `
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('published')" id="tabPublished">Published</button>
-      <button class="tab" onclick="switchTab('drafts')" id="tabDrafts">Drafts</button>
-    </div>
-    <div style="margin-bottom:1rem;">
-      <button class="btn-primary" onclick="showCreateDirectoryForm()" style="width:auto;">+ Create New Directory</button>
-    </div>
-    <div id="directoryList" class="card-grid"></div>
-  `;
+  content.innerHTML = '<div class="tabs"><button class="tab active" onclick="switchTab(\'published\')" id="tabPublished">Published</button><button class="tab" onclick="switchTab(\'drafts\')" id="tabDrafts">Drafts</button></div><div style="margin-bottom:1rem;"><button class="btn-primary" onclick="showCreateDirectoryForm()" style="width:auto;">+ Create New Directory</button></div><div id="directoryList" class="card-grid"></div>';
 
   db.collection('directories').onSnapshot((snapshot) => {
     const directories = [];
-    snapshot.forEach(doc => {
-      directories.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(doc => { directories.push({ id: doc.id, ...doc.data() }); });
     renderDirectoryCards(directories, 'published');
     window.allDirectories = directories;
   });
@@ -31,17 +20,8 @@ function switchTab(tab) {
 function renderDirectoryCards(directories, filter) {
   const container = document.getElementById('directoryList');
   if (!container) return;
-  
-  const filtered = directories.filter(d => {
-    if (filter === 'published') return d.status === 'published';
-    return d.status === 'draft';
-  });
-
-  if (filtered.length === 0) {
-    container.innerHTML = '<p style="color:#666;">No ' + filter + ' directories yet.</p>';
-    return;
-  }
-
+  const filtered = directories.filter(d => { if (filter === 'published') return d.status === 'published'; return d.status === 'draft'; });
+  if (filtered.length === 0) { container.innerHTML = '<p style="color:#666;">No ' + filter + ' directories yet.</p>'; return; }
   container.innerHTML = filtered.map(dir => {
     let displayTitle = dir.nicheDisplay + ' in ' + dir.locationDisplay;
     if (dir.categoryTag) displayTitle = dir.categoryTag + ' ' + dir.nicheDisplay + ' in ' + dir.locationDisplay;
@@ -51,52 +31,7 @@ function renderDirectoryCards(directories, filter) {
 
 function showCreateDirectoryForm() {
   const content = document.getElementById('content');
-  content.innerHTML = `
-    <h2>Create New Directory</h2>
-    <div class="card">
-      <div class="form-group">
-        <label>Niche Type *</label>
-        <select id="nicheType" onchange="updateSlugPreview()">
-          <option value="guesthouse">Guesthouse</option>
-          <option value="hotel">Hotel</option>
-          <option value="apartment">Apartment</option>
-          <option value="school">School</option>
-          <option value="health">Health Facility</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Location Name *</label>
-        <input type="text" id="locationName" placeholder="e.g., Mpeketoni" oninput="updateSlugPreview()">
-      </div>
-      <div class="form-group">
-        <label>Category Tag (optional, e.g., Luxury, Budget, Near Town)</label>
-        <input type="text" id="categoryTag" placeholder="e.g., Luxury, Budget, Near Town Center" oninput="updateSlugPreview()">
-        <small style="color:#666;">Leave empty if this directory covers all categories.</small>
-      </div>
-      <div class="form-group">
-        <label>Directory Slug (auto-generated)</label>
-        <input type="text" id="directorySlug" readonly style="background:#f5f5f5;">
-      </div>
-      <div class="form-group">
-        <label>Location Description *</label>
-        <textarea id="locationDescription" placeholder="Describe this location..."></textarea>
-      </div>
-      <div class="form-group">
-        <label>Hero Image</label>
-        <input type="file" id="heroImageFile" accept="image/*">
-        <div id="heroPreview"></div>
-      </div>
-      <div class="form-group">
-        <label>Hero Image Alt Text</label>
-        <input type="text" id="heroImageAlt" placeholder="Describe the hero image">
-      </div>
-      <div style="display:flex; gap:1rem;">
-        <button class="btn-secondary" onclick="loadDirectoryList()">Cancel</button>
-        <button class="btn-secondary" onclick="saveDirectory('draft')">Save as Draft</button>
-        <button class="btn-primary" onclick="saveDirectory('published')">Save & Publish</button>
-      </div>
-    </div>
-  `;
+  content.innerHTML = '<h2>Create New Directory</h2><div class="card"><div class="form-group"><label>Niche Type *</label><select id="nicheType" onchange="updateSlugPreview()"><option value="guesthouse">Guesthouse</option><option value="hotel">Hotel</option><option value="apartment">Apartment</option><option value="school">School</option><option value="health">Health Facility</option></select></div><div class="form-group"><label>Location Name *</label><input type="text" id="locationName" placeholder="e.g., Mpeketoni" oninput="updateSlugPreview()"></div><div class="form-group"><label>Category Tag (optional)</label><input type="text" id="categoryTag" placeholder="e.g., Luxury, Budget" oninput="updateSlugPreview()"></div><div class="form-group"><label>Directory Slug (auto-generated)</label><input type="text" id="directorySlug" readonly style="background:#f5f5f5;"></div><div class="form-group"><label>Location Description</label><textarea id="locationDescription" placeholder="Describe this location..."></textarea></div><div class="form-group"><label>Hero Image</label><input type="file" id="heroImageFile" accept="image/*"><div id="heroPreview"></div></div><div class="form-group"><label>Hero Image Alt Text</label><input type="text" id="heroImageAlt" placeholder="Describe the hero image"></div><div style="display:flex; gap:1rem;"><button class="btn-secondary" onclick="loadDirectoryList()">Cancel</button><button class="btn-secondary" id="btnDraft" onclick="saveDirectory(\'draft\')">Save as Draft</button><button class="btn-primary" id="btnPublish" onclick="saveDirectory(\'published\')">Save & Publish</button></div></div>';
 }
 
 function updateSlugPreview() {
@@ -110,46 +45,50 @@ function updateSlugPreview() {
 }
 
 async function saveDirectory(status) {
-  const nicheType = document.getElementById('nicheType').value;
-  const locationName = document.getElementById('locationName').value.trim();
-  const categoryTag = document.getElementById('categoryTag').value.trim();
-  const locationDescription = document.getElementById('locationDescription').value.trim();
-  const slug = document.getElementById('directorySlug').value;
-  const heroAlt = document.getElementById('heroImageAlt').value.trim();
-  const heroFile = document.getElementById('heroImageFile').files[0];
+  const btnDraft = document.getElementById('btnDraft');
+  const btnPublish = document.getElementById('btnPublish');
+  if (btnDraft) { btnDraft.disabled = true; btnDraft.textContent = 'Saving...'; }
+  if (btnPublish) { btnPublish.disabled = true; btnPublish.textContent = 'Saving...'; }
 
-  if (!locationName || !locationDescription) {
-    alert('Please fill all required fields');
-    return;
-  }
+  try {
+    const nicheType = document.getElementById('nicheType').value;
+    const locationName = document.getElementById('locationName').value.trim();
+    const categoryTag = document.getElementById('categoryTag').value.trim();
+    const locationDescription = document.getElementById('locationDescription').value.trim();
+    const slug = document.getElementById('directorySlug').value;
+    const heroAlt = document.getElementById('heroImageAlt').value.trim();
+    const heroFile = document.getElementById('heroImageFile').files[0];
 
-  const nicheDisplay = {
-    guesthouse: 'Guesthouses', hotel: 'Hotels', apartment: 'Apartments', school: 'Schools', health: 'Health Facilities'
-  }[nicheType] || 'Listings';
+    if (!locationName) { alert('Location name is required.'); if (btnDraft) { btnDraft.disabled = false; btnDraft.textContent = 'Save as Draft'; } if (btnPublish) { btnPublish.disabled = false; btnPublish.textContent = 'Save & Publish'; } return; }
 
-  const docRef = db.collection('directories').doc(slug);
-  const now = new Date().toISOString();
+    const nicheDisplay = { guesthouse: 'Guesthouses', hotel: 'Hotels', apartment: 'Apartments', school: 'Schools', health: 'Health Facilities' }[nicheType] || 'Listings';
+    const docRef = db.collection('directories').doc(slug);
+    const now = new Date().toISOString();
 
-  const data = {
-    directory: slug, nicheSlug: nicheType, nicheDisplay: nicheDisplay,
-    location: locationName.toLowerCase().replace(/\s+/g, '-'), locationDisplay: locationName,
-    categoryTag: categoryTag, locationDescription: locationDescription,
-    heroImage: '', heroImageAlt: heroAlt, heroImageStatus: 'pending',
-    status: status, lastModified: now, lastEditedAt: now, listings: [], globalFaqs: []
-  };
+    const data = {
+      directory: slug, nicheSlug: nicheType, nicheDisplay: nicheDisplay,
+      location: locationName.toLowerCase().replace(/\s+/g, '-'), locationDisplay: locationName,
+      categoryTag: categoryTag, locationDescription: locationDescription,
+      heroImage: '', heroImageAlt: heroAlt, heroImageStatus: 'pending',
+      status: status, lastModified: now, lastEditedAt: now, listings: [], globalFaqs: []
+    };
 
-  if (heroFile) {
-    try {
-      const imageUrl = await uploadHero(heroFile, slug);
-      data.heroImage = imageUrl;
-      data.heroImageStatus = 'ready';
-    } catch (error) {
-      console.error('Hero image upload failed:', error);
+    if (heroFile) {
+      try {
+        const imageUrl = await uploadHero(heroFile, slug);
+        data.heroImage = imageUrl;
+        data.heroImageStatus = 'ready';
+      } catch (error) { console.error('Hero image upload failed:', error); }
     }
-  }
 
-  await docRef.set(data);
-  loadDirectoryList();
+    await docRef.set(data);
+    loadDirectoryList();
+  } catch (error) {
+    console.error('Save failed:', error);
+    alert('Save failed. Please try again.');
+    if (btnDraft) { btnDraft.disabled = false; btnDraft.textContent = 'Save as Draft'; }
+    if (btnPublish) { btnPublish.disabled = false; btnPublish.textContent = 'Save & Publish'; }
+  }
 }
 
 function editDirectory(slug) {
@@ -158,59 +97,49 @@ function editDirectory(slug) {
     let displayTitle = data.nicheDisplay + ' in ' + data.locationDisplay;
     if (data.categoryTag) displayTitle = data.categoryTag + ' ' + data.nicheDisplay + ' in ' + data.locationDisplay;
     const content = document.getElementById('content');
-    content.innerHTML = `
-      <h2>Edit: ${displayTitle}</h2>
-      <span class="status-badge status-${data.status === 'published' ? 'published' : 'draft'}">${data.status}</span>
-      <div class="card" style="margin-top:1rem;">
-        <div class="form-group"><label>Location Description</label><textarea id="editDescription">${data.locationDescription || ''}</textarea></div>
-        <div class="form-group"><label>Hero Image</label><input type="file" id="editHeroFile" accept="image/*"><div id="heroPreview">${data.heroImage ? '<img src="' + data.heroImage + '" alt="' + (data.heroImageAlt || '') + '" class="image-preview">' : ''}</div></div>
-        <div class="form-group"><label>Hero Alt Text</label><input type="text" id="editHeroAlt" value="${data.heroImageAlt || ''}"></div>
-        <button class="btn-primary" onclick="updateDirectory('${slug}')">Update Directory</button>
-        ${data.status === 'draft' ? '<button class="btn-success" onclick="changeDirectoryStatus(\'' + slug + '\', \'published\')">Publish Now</button>' : '<button class="btn-secondary" onclick="changeDirectoryStatus(\'' + slug + '\', \'draft\')">Unpublish</button>'}
-      </div>
-      <h3 style="margin-top:1.5rem;">Listings (${(data.listings || []).length}/10)</h3>
-      <button class="btn-primary" onclick="showListingForm('${slug}')" style="width:auto;">+ Add Listing</button>
-      <div id="listingsList" style="margin-top:1rem;">${(data.listings || []).map((listing, idx) => '<div class="listing-item" onclick="showListingForm(\'' + slug + '\', \'' + listing.id + '\')"><img src="' + (listing.thumbnail || '') + '" alt="' + (listing.thumbnailAlt || '') + '"><div class="listing-item-info"><h3>' + listing.name + '</h3><p>' + (listing.priceCategory || 'No price') + ' | ' + (listing.phoneDisplay || '') + '</p></div><button class="btn-danger" onclick="event.stopPropagation(); deleteListing(\'' + slug + '\', \'' + listing.id + '\')">Delete</button></div>').join('')}</div>
-      <h3 style="margin-top:1.5rem;">Global FAQs</h3>
-      <div id="globalFaqsContainer">${(data.globalFaqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="faqQ' + idx + '"></div><div class="form-group"><textarea id="faqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('')}</div>
-      <button class="btn-secondary" onclick="addGlobalFaqRow()">+ Add FAQ</button>
-      <button class="btn-primary" onclick="saveGlobalFaqs('${slug}')" style="margin-top:1rem;">Save FAQs</button>
-      <div style="margin-top:1.5rem;"><button class="btn-secondary" onclick="loadDirectoryList()">← Back to Directories</button></div>
-    `;
+    content.innerHTML = '<h2>Edit: ' + displayTitle + '</h2><span class="status-badge status-' + (data.status === 'published' ? 'published' : 'draft') + '">' + data.status + '</span><div class="card" style="margin-top:1rem;"><div class="form-group"><label>Location Description</label><textarea id="editDescription">' + (data.locationDescription || '') + '</textarea></div><div class="form-group"><label>Hero Image</label><input type="file" id="editHeroFile" accept="image/*"><div id="heroPreview">' + (data.heroImage ? '<img src="' + data.heroImage + '" alt="' + (data.heroImageAlt || '') + '" class="image-preview">' : '') + '</div></div><div class="form-group"><label>Hero Alt Text</label><input type="text" id="editHeroAlt" value="' + (data.heroImageAlt || '') + '"></div><button class="btn-primary" id="btnUpdateDir" onclick="updateDirectory(\'' + slug + '\')">Update Directory</button>' + (data.status === 'draft' ? '<button class="btn-success" id="btnPubNow" onclick="changeDirectoryStatus(\'' + slug + '\', \'published\')">Publish Now</button>' : '<button class="btn-secondary" id="btnUnpub" onclick="changeDirectoryStatus(\'' + slug + '\', \'draft\')">Unpublish</button>') + '</div><h3 style="margin-top:1.5rem;">Listings (' + ((data.listings || []).length) + '/10)</h3><button class="btn-primary" onclick="showListingForm(\'' + slug + '\')" style="width:auto;">+ Add Listing</button><div id="listingsList" style="margin-top:1rem;">' + (data.listings || []).map((listing, idx) => '<div class="listing-item" onclick="showListingForm(\'' + slug + '\', \'' + listing.id + '\')"><img src="' + (listing.thumbnail || '') + '" alt="' + (listing.thumbnailAlt || '') + '"><div class="listing-item-info"><h3>' + listing.name + '</h3><p>' + (listing.priceCategory || 'No price') + ' | ' + (listing.phoneDisplay || '') + '</p></div><button class="btn-danger" onclick="event.stopPropagation(); deleteListing(\'' + slug + '\', \'' + listing.id + '\')">Delete</button></div>').join('') + '</div><h3 style="margin-top:1.5rem;">Global FAQs</h3><div id="globalFaqsContainer">' + (data.globalFaqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="faqQ' + idx + '"></div><div class="form-group"><textarea id="faqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('') + '</div><button class="btn-secondary" onclick="addGlobalFaqRow()">+ Add FAQ</button><button class="btn-primary" id="btnSaveFaqs" onclick="saveGlobalFaqs(\'' + slug + '\')" style="margin-top:1rem;">Save FAQs</button><div style="margin-top:1.5rem;"><button class="btn-secondary" onclick="loadDirectoryList()">← Back to Directories</button></div>';
   });
 }
 
 async function updateDirectory(slug) {
-  const desc = document.getElementById('editDescription').value;
-  const heroAlt = document.getElementById('editHeroAlt').value;
-  const heroFile = document.getElementById('editHeroFile').files[0];
-  const updates = { locationDescription: desc, heroImageAlt: heroAlt, lastEditedAt: new Date().toISOString() };
-
-  if (heroFile) {
-    try {
-      const imageUrl = await uploadHero(heroFile, slug);
-      updates.heroImage = imageUrl;
-      updates.heroImageStatus = 'ready';
-    } catch (error) {
-      console.error('Hero image upload failed:', error);
+  const btn = document.getElementById('btnUpdateDir');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+  try {
+    const desc = document.getElementById('editDescription').value;
+    const heroAlt = document.getElementById('editHeroAlt').value;
+    const heroFile = document.getElementById('editHeroFile').files[0];
+    const updates = { locationDescription: desc, heroImageAlt: heroAlt, lastEditedAt: new Date().toISOString() };
+    if (heroFile) {
+      try {
+        const imageUrl = await uploadHero(heroFile, slug);
+        updates.heroImage = imageUrl;
+        updates.heroImageStatus = 'ready';
+      } catch (error) { console.error('Hero image upload failed:', error); }
     }
+    await db.collection('directories').doc(slug).update(updates);
+    loadDirectoryList();
+  } catch (error) {
+    console.error('Update failed:', error);
+    alert('Update failed. Please try again.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Update Directory'; }
   }
-
-  await db.collection('directories').doc(slug).update(updates);
-  loadDirectoryList();
 }
 
 function changeDirectoryStatus(slug, newStatus) {
-  db.collection('directories').doc(slug).update({ status: newStatus, lastEditedAt: new Date().toISOString() }).then(() => loadDirectoryList());
+  const btn = document.getElementById(newStatus === 'published' ? 'btnPubNow' : 'btnUnpub');
+  if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
+  db.collection('directories').doc(slug).update({ status: newStatus, lastEditedAt: new Date().toISOString() }).then(() => loadDirectoryList()).catch(error => { console.error(error); if (btn) { btn.disabled = false; btn.textContent = newStatus === 'published' ? 'Publish Now' : 'Unpublish'; } });
 }
 
 function deleteDirectory(slug) {
   if (!confirm('Delete this directory and all its files? This cannot be undone.')) return;
+  const btn = event.target;
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting...'; }
   storage.ref('directories/' + slug).listAll().then(res => {
     res.items.forEach(item => item.delete());
     res.prefixes.forEach(prefix => prefix.listAll().then(r => r.items.forEach(i => i.delete())));
   });
-  db.collection('directories').doc(slug).delete().then(() => loadDirectoryList());
+  db.collection('directories').doc(slug).delete().then(() => loadDirectoryList()).catch(error => { console.error(error); if (btn) { btn.disabled = false; btn.textContent = 'Delete'; } });
 }
 
 function addGlobalFaqRow() {
@@ -223,6 +152,8 @@ function addGlobalFaqRow() {
 }
 
 function saveGlobalFaqs(slug) {
+  const btn = document.getElementById('btnSaveFaqs');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
   const container = document.getElementById('globalFaqsContainer');
   const rows = container.querySelectorAll('.faq-row');
   const faqs = [];
@@ -231,5 +162,5 @@ function saveGlobalFaqs(slug) {
     const a = row.querySelector('textarea')?.value?.trim();
     if (q && a) faqs.push({ question: q, answer: a });
   });
-  db.collection('directories').doc(slug).update({ globalFaqs: faqs, lastEditedAt: new Date().toISOString() }).then(() => editDirectory(slug));
+  db.collection('directories').doc(slug).update({ globalFaqs: faqs, lastEditedAt: new Date().toISOString() }).then(() => editDirectory(slug)).catch(error => { console.error(error); if (btn) { btn.disabled = false; btn.textContent = 'Save FAQs'; } });
 }
