@@ -40,7 +40,7 @@ function compressImage(file, maxWidth, quality) {
 function uploadImage(file, storagePath) {
   return new Promise((resolve, reject) => {
     // Compress first — max 800px width, 70% quality
-    compressImage(file, 600, 0.5).then(compressedBlob => {
+    compressImage(file, 800, 0.7).then(compressedBlob => {
       const uploadTask = storage.ref(storagePath).put(compressedBlob);
       
       uploadTask.on('state_changed',
