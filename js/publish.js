@@ -1,19 +1,17 @@
 // Trigger manual publish via Cloud Function
 async function triggerPublish(btnElement) {
-  if (!confirm('This will rebuild the public website. All published directories will go live in 2-3 minutes. Continue?')) return;
-
   const btn = btnElement || document.querySelector('.btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Publishing...'; }
 
   try {
     const triggerFn = functions.httpsCallable('triggerPublish');
     const result = await triggerFn();
-    alert('Build triggered successfully! Published directories will be live in 2-3 minutes.');
+    btn.textContent = '✓ Build Triggered';
+    setTimeout(() => { btn.textContent = '🚀 Publish All Changes'; btn.disabled = false; }, 3000);
   } catch (error) {
     console.error('Publish failed:', error);
-    alert('Failed to trigger build. Try again or trigger manually from GitHub Actions.');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🚀 Publish All Changes'; }
+    btn.textContent = '✗ Failed. Try Again';
+    setTimeout(() => { btn.textContent = '🚀 Publish All Changes'; btn.disabled = false; }, 3000);
   }
 }
 

@@ -1,17 +1,21 @@
+// Global state
+let activeTab = 'published';
+
 // Load directory list with Published/Drafts tabs
 function loadDirectoryList() {
   const content = document.getElementById('content');
-  content.innerHTML = '<div class="tabs"><button class="tab active" onclick="switchTab(\'published\')" id="tabPublished">Published</button><button class="tab" onclick="switchTab(\'drafts\')" id="tabDrafts">Drafts</button></div><div style="margin-bottom:1rem;"><button class="btn-primary" onclick="showCreateDirectoryForm()" style="width:auto;">+ Create New Directory</button></div><div id="directoryList" class="card-grid"></div>';
+  content.innerHTML = '<div class="tabs"><button class="tab ' + (activeTab === 'published' ? 'active' : '') + '" onclick="switchTab(\'published\')" id="tabPublished">Published</button><button class="tab ' + (activeTab === 'drafts' ? 'active' : '') + '" onclick="switchTab(\'drafts\')" id="tabDrafts">Drafts</button></div><div style="margin-bottom:1rem;"><button class="btn-primary" onclick="showCreateDirectoryForm()" style="width:auto;">+ Create New Directory</button></div><div id="directoryList" class="card-grid"></div>';
 
   db.collection('directories').onSnapshot((snapshot) => {
     const directories = [];
     snapshot.forEach(doc => { directories.push({ id: doc.id, ...doc.data() }); });
-    renderDirectoryCards(directories, 'published');
     window.allDirectories = directories;
+    renderDirectoryCards(directories, activeTab);
   });
 }
 
 function switchTab(tab) {
+  activeTab = tab;
   document.getElementById('tabPublished').classList.toggle('active', tab === 'published');
   document.getElementById('tabDrafts').classList.toggle('active', tab === 'drafts');
   renderDirectoryCards(window.allDirectories || [], tab);
@@ -25,20 +29,45 @@ function renderDirectoryCards(directories, filter) {
   container.innerHTML = filtered.map(dir => {
     let displayTitle = dir.nicheDisplay + ' in ' + dir.locationDisplay;
     if (dir.categoryTag) displayTitle = dir.categoryTag + ' ' + dir.nicheDisplay + ' in ' + dir.locationDisplay;
-    return '<div class="card"><div style="display:flex; justify-content:space-between; align-items:start;"><span class="status-badge status-' + (dir.status === 'published' ? 'published' : 'draft') + '">' + dir.status + '</span></div><h3 style="margin:0.5rem 0;">' + displayTitle + '</h3><p style="color:#666; font-size:0.9rem;">' + (dir.listings ? dir.listings.length : 0) + ' listings</p><p style="color:#999; font-size:0.8rem;">Last edited: ' + new Date(dir.lastEditedAt).toLocaleDateString('en-KE') + '</p><div style="display:flex; gap:0.5rem; margin-top:0.5rem;"><button class="btn-secondary" onclick="editDirectory(\'' + dir.id + '\')">Edit</button>' + (dir.status === 'draft' ? '<button class="btn-success" onclick="changeDirectoryStatus(\'' + dir.id + '\', \'published\')">Publish</button>' : '<button class="btn-secondary" onclick="changeDirectoryStatus(\'' + dir.id + '\', \'draft\')">Unpublish</button>') + '<button class="btn-danger" onclick="deleteDirectory(\'' + dir.id + '\')">Delete</button></div></div>';
+    return '<div class="card"><div style="display:flex; justify-content:space-between; align-items:start;"><span class="status-badge status-' + (dir.status === 'published' ? 'published' : 'draft') + '">' + dir.status + '</span></div><h3 style="margin:0.5rem 0;">' + displayTitle + '</h3><p style="color:#666; font-size:0.9rem;">' + (dir.listings ? dir.listings.length : 0) + ' listings</p><p style="color:#999; font-size:0.8rem;">Last edited: ' + new Date(dir.lastEditedAt).toLocaleDateString('en-KE') + '</p><div style="display:flex; gap:0.5rem; margin-top:0.5rem;"><button class="btn-secondary" onclick="editDirectory(\'' + dir.id + '\')">Edit</button>' + (dir.status === 'draft' ? '<button class="btn-success" onclick="changeDirectoryStatus(\'' + dir.id + '\', \'published\')">Publish</button>' : '<button class="btn-secondary" onclick="changeDirectoryStatus(\'' + dir.id + '\', \'draft\')">Unpublish</button>') + '<button class="btn-danger" onclick="deleteDirectory(\'' + dir.id + '\', this)">Delete</button></div></div>';
   }).join('');
 }
 
 function showCreateDirectoryForm() {
   const content = document.getElementById('content');
-  content.innerHTML = '<h2>Create New Directory</h2><div class="card"><div class="form-group"><label>Niche Type *</label><select id="nicheType" onchange="updateSlugPreview()"><option value="guesthouse">Guesthouse</option><option value="hotel">Hotel</option><option value="apartment">Apartment</option><option value="school">School</option><option value="health">Health Facility</option></select></div><div class="form-group"><label>Location Name *</label><input type="text" id="locationName" placeholder="e.g., Mpeketoni" oninput="updateSlugPreview()"></div><div class="form-group"><label>Category Tag (optional)</label><input type="text" id="categoryTag" placeholder="e.g., Luxury, Budget" oninput="updateSlugPreview()"></div><div class="form-group"><label>Directory Slug (auto-generated)</label><input type="text" id="directorySlug" readonly style="background:#f5f5f5;"></div><div class="form-group"><label>Location Description</label><textarea id="locationDescription" placeholder="Describe this location..."></textarea></div><div class="form-group"><label>Hero Image</label><input type="file" id="heroImageFile" accept="image/*"><div id="heroPreview"></div></div><div class="form-group"><label>Hero Image Alt Text</label><input type="text" id="heroImageAlt" placeholder="Describe the hero image"></div><div style="display:flex; gap:1rem;"><button class="btn-secondary" onclick="loadDirectoryList()">Cancel</button><button class="btn-secondary" id="btnDraft" onclick="saveDirectory(\'draft\')">Save as Draft</button><button class="btn-primary" id="btnPublish" onclick="saveDirectory(\'published\')">Save & Publish</button></div></div>';
+  content.innerHTML = '<h2>Create New Directory</h2><div class="card"><div class="form-group"><label>Business Type / Niche *</label><input type="text" id="nicheType" placeholder="e.g., Guesthouse, Nightclub, Supermarket" oninput="updateSlugPreview()" list="nicheSuggestions"><datalist id="nicheSuggestions"><option value="Guesthouse"><option value="Hotel"><option value="Apartment"><option value="School"><option value="Health Facility"><option value="Nightclub"><option value="Supermarket"><option value="Restaurant"><option value="Gym"><option value="Salon"><option value="Pharmacy"><option value="Hardware"><option value="Church"><option value="Car Wash"></datalist></div><div class="form-group"><label>Location Name *</label><input type="text" id="locationName" placeholder="e.g., Mpeketoni" oninput="updateSlugPreview()"></div><div class="form-group"><label>County</label><input type="text" id="locationCounty" placeholder="e.g., Lamu"></div><div class="form-group"><label>Sub-County</label><input type="text" id="locationSubCounty" placeholder="e.g., Mpeketoni Ward"></div><div class="form-group"><label>Category Tag (optional)</label><input type="text" id="categoryTag" placeholder="e.g., Luxury, Budget, Premium" oninput="updateSlugPreview()"></div><div class="form-group"><label>Directory Slug (auto-generated)</label><input type="text" id="directorySlug" readonly style="background:#f5f5f5;"></div><div class="form-group"><label>Location Description</label><textarea id="locationDescription" placeholder="Describe this location or use AI..."></textarea><button class="btn-secondary" id="btnGenLocDesc" onclick="generateLocationDesc()" style="width:auto; margin-top:0.5rem;">✨ Generate Location Description</button></div><div class="form-group"><label>Hero Image</label><input type="file" id="heroImageFile" accept="image/*"><div id="heroPreview"></div></div><div class="form-group"><label>Hero Image Alt Text</label><input type="text" id="heroImageAlt" placeholder="Describe the hero image"></div><div style="display:flex; gap:1rem;"><button class="btn-secondary" onclick="loadDirectoryList()">Cancel</button><button class="btn-secondary" id="btnDraft" onclick="saveDirectory(\'draft\')">Save as Draft</button><button class="btn-primary" id="btnPublish" onclick="saveDirectory(\'published\')">Save & Publish</button></div></div>';
+}
+
+async function generateLocationDesc() {
+  const btn = document.getElementById('btnGenLocDesc');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  try {
+    const locationName = document.getElementById('locationName').value.trim();
+    const county = document.getElementById('locationCounty').value.trim();
+    const subCounty = document.getElementById('locationSubCounty').value.trim();
+    const niche = document.getElementById('nicheType').value.trim();
+
+    if (!locationName || !niche) {
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Generate Location Description'; }
+      return;
+    }
+
+    const genFn = functions.httpsCallable('generateLocationDescription');
+    const result = await genFn({ locationName, county, subCounty, niche });
+    document.getElementById('locationDescription').value = result.data.description || '';
+    if (btn) { btn.textContent = '✓ Generated'; setTimeout(() => { btn.disabled = false; btn.textContent = '✨ Generate Location Description'; }, 2000); }
+  } catch (error) {
+    console.error('Location description generation failed:', error);
+    if (btn) { btn.disabled = false; btn.textContent = '✗ Failed. Try Again'; setTimeout(() => { btn.textContent = '✨ Generate Location Description'; }, 2000); }
+  }
 }
 
 function updateSlugPreview() {
   const niche = document.getElementById('nicheType').value;
   const location = document.getElementById('locationName').value;
   const category = document.getElementById('categoryTag').value.trim();
-  let slugParts = [niche];
+  const nicheSlug = niche.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  let slugParts = [nicheSlug];
   if (category) slugParts.push(category.toLowerCase().replace(/\s+/g, '-'));
   slugParts.push(location.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
   document.getElementById('directorySlug').value = slugParts.join('-');
@@ -51,7 +80,7 @@ async function saveDirectory(status) {
   if (btnPublish) { btnPublish.disabled = true; btnPublish.textContent = 'Saving...'; }
 
   try {
-    const nicheType = document.getElementById('nicheType').value;
+    const nicheType = document.getElementById('nicheType').value.trim();
     const locationName = document.getElementById('locationName').value.trim();
     const categoryTag = document.getElementById('categoryTag').value.trim();
     const locationDescription = document.getElementById('locationDescription').value.trim();
@@ -59,14 +88,15 @@ async function saveDirectory(status) {
     const heroAlt = document.getElementById('heroImageAlt').value.trim();
     const heroFile = document.getElementById('heroImageFile').files[0];
 
-    if (!locationName) { alert('Location name is required.'); if (btnDraft) { btnDraft.disabled = false; btnDraft.textContent = 'Save as Draft'; } if (btnPublish) { btnPublish.disabled = false; btnPublish.textContent = 'Save & Publish'; } return; }
+    if (!nicheType || !locationName) { console.warn('Niche and location required'); if (btnDraft) { btnDraft.disabled = false; btnDraft.textContent = 'Save as Draft'; } if (btnPublish) { btnPublish.disabled = false; btnPublish.textContent = 'Save & Publish'; } return; }
 
-    const nicheDisplay = { guesthouse: 'Guesthouses', hotel: 'Hotels', apartment: 'Apartments', school: 'Schools', health: 'Health Facilities' }[nicheType] || 'Listings';
+    const nicheSlug = nicheType.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const nicheDisplay = nicheType.charAt(0).toUpperCase() + nicheType.slice(1);
     const docRef = db.collection('directories').doc(slug);
     const now = new Date().toISOString();
 
     const data = {
-      directory: slug, nicheSlug: nicheType, nicheDisplay: nicheDisplay,
+      directory: slug, nicheSlug: nicheSlug, nicheDisplay: nicheDisplay,
       location: locationName.toLowerCase().replace(/\s+/g, '-'), locationDisplay: locationName,
       categoryTag: categoryTag, locationDescription: locationDescription,
       heroImage: '', heroImageAlt: heroAlt, heroImageStatus: 'pending',
@@ -82,10 +112,10 @@ async function saveDirectory(status) {
     }
 
     await docRef.set(data);
+    activeTab = status === 'draft' ? 'drafts' : 'published';
     loadDirectoryList();
   } catch (error) {
     console.error('Save failed:', error);
-    alert('Save failed. Please try again.');
     if (btnDraft) { btnDraft.disabled = false; btnDraft.textContent = 'Save as Draft'; }
     if (btnPublish) { btnPublish.disabled = false; btnPublish.textContent = 'Save & Publish'; }
   }
@@ -120,7 +150,6 @@ async function updateDirectory(slug) {
     loadDirectoryList();
   } catch (error) {
     console.error('Update failed:', error);
-    alert('Update failed. Please try again.');
     if (btn) { btn.disabled = false; btn.textContent = 'Update Directory'; }
   }
 }
@@ -128,12 +157,11 @@ async function updateDirectory(slug) {
 function changeDirectoryStatus(slug, newStatus) {
   const btn = document.getElementById(newStatus === 'published' ? 'btnPubNow' : 'btnUnpub');
   if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
+  activeTab = newStatus === 'draft' ? 'drafts' : 'published';
   db.collection('directories').doc(slug).update({ status: newStatus, lastEditedAt: new Date().toISOString() }).then(() => loadDirectoryList()).catch(error => { console.error(error); if (btn) { btn.disabled = false; btn.textContent = newStatus === 'published' ? 'Publish Now' : 'Unpublish'; } });
 }
 
-function deleteDirectory(slug) {
-  if (!confirm('Delete this directory and all its files? This cannot be undone.')) return;
-  const btn = event.target;
+function deleteDirectory(slug, btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Deleting...'; }
   storage.ref('directories/' + slug).listAll().then(res => {
     res.items.forEach(item => item.delete());

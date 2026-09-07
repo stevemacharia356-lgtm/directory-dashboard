@@ -48,11 +48,44 @@ const NICHE_FIELDS = {
   ]
 };
 
+// Dynamic fields cache
+let dynamicFieldsCache = {};
+
+// Fetch niche-specific fields from Gemini
+async function fetchNicheFields(nicheName) {
+  const key = nicheName.toLowerCase();
+  if (dynamicFieldsCache[key]) return dynamicFieldsCache[key];
+
+  const getFieldsFn = functions.httpsCallable('getNicheFields');
+  const result = await getFieldsFn({ nicheName: nicheName });
+  const fields = result.data.fields || [];
+  
+  // Add nicheSpecificKey to each field
+  fields.forEach(f => { f.nicheSpecificKey = f.fieldName; });
+  
+  dynamicFieldsCache[key] = fields;
+  return fields;
+}
+
 // Render niche-specific form fields dynamically
-function renderNicheForm(nicheSlug, containerElement, existingData) {
+async function renderNicheForm(nicheSlug, containerElement, existingData) {
   containerElement.innerHTML = '';
-  const fields = NICHE_FIELDS[nicheSlug] || [];
-  const customInputs = {};
+  
+  let fields = NICHE_FIELDS[nicheSlug];
+  
+  if (!fields) {
+    // Custom niche — fetch from Gemini
+    containerElement.innerHTML = '<p style="color:#666;">Loading fields for ' + nicheSlug + '...</p>';
+    try {
+      fields = await fetchNicheFields(nicheSlug);
+    } catch (error) {
+      console.error('Failed to fetch niche fields:', error);
+      containerElement.innerHTML = '<div class="form-group"><label>Services / Products</label><input type="text" placeholder="Enter services comma separated"></div>';
+      fields = [{ fieldName: 'services', label: 'Services / Products', inputType: 'text', required: false, nicheSpecificKey: 'services' }];
+    }
+  }
+
+  containerElement.innerHTML = '';
 
   fields.forEach(field => {
     const formGroup = document.createElement('div');
@@ -78,7 +111,7 @@ function renderNicheForm(nicheSlug, containerElement, existingData) {
       const select = document.createElement('select');
       select.name = field.fieldName;
       if (field.required) select.required = true;
-      field.options.forEach(opt => {
+      (field.options || []).forEach(opt => {
         const option = document.createElement('option');
         option.value = opt;
         option.textContent = opt;
@@ -96,7 +129,7 @@ function renderNicheForm(nicheSlug, containerElement, existingData) {
       checkboxContainer.style.flexWrap = 'wrap';
       checkboxContainer.style.gap = '0.5rem';
 
-      field.options.forEach(opt => {
+      (field.options || []).forEach(opt => {
         const checkboxLabel = document.createElement('label');
         checkboxLabel.style.display = 'flex';
         checkboxLabel.style.alignItems = 'center';
@@ -119,7 +152,6 @@ function renderNicheForm(nicheSlug, containerElement, existingData) {
 
       formGroup.appendChild(checkboxContainer);
 
-      // Custom input for additional options
       const customRow = document.createElement('div');
       customRow.style.display = 'flex';
       customRow.style.gap = '0.5rem';
@@ -187,7 +219,6 @@ function renderNicheForm(nicheSlug, containerElement, existingData) {
     containerElement.appendChild(formGroup);
   });
 
-  // Return function to collect values
   return {
     getValues: function() {
       const values = {};
