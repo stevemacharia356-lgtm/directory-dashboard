@@ -243,7 +243,7 @@ exports.generateBusinessSummary = functions.https.onCall(async (data, context) =
     throw new functions.https.HttpsError('invalid-argument', 'Listing data is required.');
   }
 
-  const prompt = 'You are an expert Kenyan business writer following Google\'s E-E-A-T guidelines. Write a concise 50-80 word summary for "' + listingData.name + '", a "' + (listingData.niche || 'business') + '" business. Use ONLY these details:\n' + JSON.stringify(listingData, null, 2) + '\n\nRULES:\n- Write in third person. No "I", "me", "we", "our".\n- No markdown. No exclamation points.\n- No invented facts. Use only provided details.\n- Be factual and concise. Focus on what customers need to know.\n- If details are sparse, keep summary shorter. Never add unverified claims.\n- Mention the business name and what it offers clearly in the first sentence.';
+  const prompt = 'You are an expert Kenyan business writer following Google\'s E-E-A-T guidelines. Write a concise 60-100 word summary for "' + listingData.name + '", a "' + (listingData.niche || 'business') + '" business located in "' + (listingData.location || 'Kenya') + '". Use ONLY these details:\n' + JSON.stringify(listingData, null, 2) + '\n\nRULES:\n- First sentence must include business name, niche, and location naturally.\n- Write in third person. No "I", "me", "we", "our".\n- No markdown. No exclamation points.\n- No invented facts. Use only provided details.\n- Mention key services or features from the details provided.\n- End with a practical reason to visit or contact.\n- Keep under 100 words.';
 
   try {
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=' + apiKey, {

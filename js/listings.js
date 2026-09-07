@@ -4,6 +4,10 @@ async function showListingForm(directorySlug, listingId) {
   const dirData = doc.data();
   const existingListing = listingId ? (dirData.listings || []).find(l => l.id === listingId) : null;
   
+  // Store directory context for summary generation
+  window._dirLocation = dirData.locationDisplay || '';
+  window._dirNiche = dirData.nicheDisplay || '';
+
   const content = document.getElementById('content');
   content.innerHTML = `
     <h2>${existingListing ? 'Edit' : 'Add'} Listing - ${dirData.nicheDisplay} in ${dirData.locationDisplay}</h2>
@@ -145,6 +149,8 @@ async function generateSummary() {
     const directions = document.getElementById('listingDirections').value.trim();
     const priceCategory = document.getElementById('listingPriceCategory').value;
     const nicheSpecific = window._nicheForm ? window._nicheForm.getValues() : {};
+    const location = window._dirLocation || '';
+    const niche = window._dirNiche || priceCategory || 'business';
 
     const nicheValues = Object.values(nicheSpecific).filter(v => 
       v !== undefined && v !== '' && v !== null && 
@@ -165,7 +171,8 @@ async function generateSummary() {
 
     const listingData = {
       name: name,
-      niche: priceCategory || 'business',
+      niche: niche,
+      location: location,
       phoneDisplay: phoneDisplay,
       directions: directions,
       priceCategory: priceCategory,
@@ -196,12 +203,14 @@ async function generateBlogForListing(directorySlug) {
     const keyword = document.getElementById('blogKeyword').value.trim();
     const standout = document.getElementById('blogStandout').value.trim();
     const ownerStory = document.getElementById('blogOwnerStory').value.trim();
+    const location = window._dirLocation || '';
+    const niche = window._dirNiche || priceCategory || 'business';
 
     const listingData = {
       name: name, summary: summary, phoneDisplay: phoneDisplay,
       directions: directions, priceCategory: priceCategory, nicheSpecific: nicheSpecific,
       targetKeyword: keyword, standoutFeature: standout, ownerStory: ownerStory,
-      directorySlug: directorySlug
+      location: location, niche: niche, directorySlug: directorySlug
     };
 
     if (!name || !summary || !directions || !keyword) {
