@@ -38,14 +38,22 @@
   <script>
     // Navigation state management
     let currentView = 'directories';
+    let currentSubView = null;
     let viewHistory = ['directories'];
     let isNavigating = false;
 
+    // Track if we're in a sub-view (like editing a listing)
+    window.isInSubView = function() {
+      return currentSubView !== null;
+    };
+
+    // Navigate to a main view
     function navigateTo(view, replace = false) {
       if (isNavigating) return;
       isNavigating = true;
 
       currentView = view;
+      currentSubView = null;
       
       if (!replace) {
         viewHistory.push(view);
@@ -56,11 +64,11 @@
       document.getElementById('navBusiness').classList.toggle('active', view === 'business');
       document.getElementById('navBuild').classList.toggle('active', view === 'build');
 
-      // Add browser history entry (only if not replace)
+      // Add browser history entry
       if (!replace) {
-        history.pushState({ view: view, historyIndex: viewHistory.length - 1 }, '', '#' + view);
+        history.pushState({ view: view, subView: null, historyIndex: viewHistory.length - 1 }, '', '#' + view);
       } else {
-        history.replaceState({ view: view, historyIndex: viewHistory.length - 1 }, '', '#' + view);
+        history.replaceState({ view: view, subView: null, historyIndex: viewHistory.length - 1 }, '', '#' + view);
       }
 
       // Load the view
@@ -68,43 +76,93 @@
       else if (view === 'business') showBusinessList();
       else if (view === 'build') loadBuildStatus();
 
-      // Preserve scroll position
-      setTimeout(() => {
-        const savedScroll = sessionStorage.getItem('scroll_' + view);
-        if (savedScroll) window.scrollTo(0, parseInt(savedScroll));
-      }, 100);
-
       isNavigating = false;
     }
 
+    // Navigate to a sub-view (like edit listing)
+    window.navigateToSubView = function(view, subView, data) {
+      if (isNavigating) return;
+      isNavigating = true;
+
+      currentView = view;
+      currentSubView = subView;
+      
+      // Push to history
+      viewHistory.push(view + '_' + subView);
+      
+      // Update nav buttons
+      document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
+      document.getElementById('navBusiness').classList.toggle('active', view === 'business');
+      document.getElementById('navBuild').classList.toggle('active', view === 'build');
+
+      // Push state with sub-view info
+      history.pushState({ 
+        view: view, 
+        subView: subView, 
+        data: data,
+        historyIndex: viewHistory.length - 1 
+      }, '', '#' + view + '/' + subView);
+
+      isNavigating = false;
+    };
+
+    // Go back function
     function goBack() {
       if (isNavigating) return;
       
-      // Don't go back if we're at the root
+      // If we're in a sub-view, go back to the main view
+      if (currentSubView) {
+        isNavigating = true;
+        
+        // Reset sub-view
+        currentSubView = null;
+        
+        // Pop the sub-view from history
+        viewHistory.pop();
+        
+        // Get the main view
+        const mainView = currentView;
+        
+        // Update nav
+        document.getElementById('navDirectories').classList.toggle('active', mainView === 'directories');
+        document.getElementById('navBusiness').classList.toggle('active', mainView === 'business');
+        document.getElementById('navBuild').classList.toggle('active', mainView === 'build');
+
+        // Replace history to remove sub-view
+        history.replaceState({ 
+          view: mainView, 
+          subView: null, 
+          historyIndex: viewHistory.length - 1 
+        }, '', '#' + mainView);
+
+        // Reload the main view
+        if (mainView === 'directories') loadDirectoryList();
+        else if (mainView === 'business') showBusinessList();
+        else if (mainView === 'build') loadBuildStatus();
+
+        isNavigating = false;
+        return;
+      }
+
+      // If we're at root, stay
       if (viewHistory.length <= 1) {
-        // If at root, stay on current view
         return;
       }
 
       isNavigating = true;
       
-      // Remove current view from history
       viewHistory.pop();
-      
-      // Get the previous view
       const previousView = viewHistory[viewHistory.length - 1] || 'directories';
       
-      // Update navigation
       currentView = previousView;
+      currentSubView = null;
       
       document.getElementById('navDirectories').classList.toggle('active', previousView === 'directories');
       document.getElementById('navBusiness').classList.toggle('active', previousView === 'business');
       document.getElementById('navBuild').classList.toggle('active', previousView === 'build');
 
-      // Replace history state to avoid duplicate entries
-      history.replaceState({ view: previousView, historyIndex: viewHistory.length - 1 }, '', '#' + previousView);
+      history.replaceState({ view: previousView, subView: null, historyIndex: viewHistory.length - 1 }, '', '#' + previousView);
 
-      // Load the view
       if (previousView === 'directories') loadDirectoryList();
       else if (previousView === 'business') showBusinessList();
       else if (previousView === 'build') loadBuildStatus();
@@ -112,44 +170,45 @@
       isNavigating = false;
     }
 
-    // Handle browser back/forward buttons
+    // Handle browser back/forward
     window.addEventListener('popstate', function(e) {
       if (isNavigating) return;
       
       if (e.state && e.state.view) {
         const view = e.state.view;
+        const subView = e.state.subView || null;
         const historyIndex = e.state.historyIndex || 0;
         
-        // Trim history if we went back
         if (historyIndex < viewHistory.length - 1) {
           viewHistory = viewHistory.slice(0, historyIndex + 1);
         }
         
         currentView = view;
+        currentSubView = subView;
         
         document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
         document.getElementById('navBusiness').classList.toggle('active', view === 'business');
         document.getElementById('navBuild').classList.toggle('active', view === 'build');
         
-        if (view === 'directories') loadDirectoryList();
-        else if (view === 'business') showBusinessList();
-        else if (view === 'build') loadBuildStatus();
+        if (view === 'directories') {
+          if (subView) {
+            // Handle sub-view restoration if needed
+            loadDirectoryList();
+          } else {
+            loadDirectoryList();
+          }
+        } else if (view === 'business') {
+          showBusinessList();
+        } else if (view === 'build') {
+          loadBuildStatus();
+        }
       } else {
-        // If no state, try to recover
         const hash = window.location.hash.replace('#', '');
         if (hash && ['directories', 'business', 'build'].includes(hash)) {
           navigateTo(hash, true);
         } else {
-          // Default to directories
           navigateTo('directories', true);
         }
-      }
-    });
-
-    // Save scroll position on scroll
-    window.addEventListener('scroll', function() {
-      if (currentView) {
-        sessionStorage.setItem('scroll_' + currentView, window.scrollY.toString());
       }
     });
 
@@ -165,16 +224,11 @@
       navigateTo('business');
     }
 
-    // Override the edit functions to push history state properly
-    // This will be called from listings.js and directories.js
-    window.pushViewState = function(view, subView) {
-      const state = { view: view, subView: subView };
-      viewHistory.push(view);
-      history.pushState(state, '', '#' + view + '/' + subView);
-    };
+    // Expose for other scripts
+    window.goBack = goBack;
+    window.navigateTo = navigateTo;
 
     document.addEventListener('DOMContentLoaded', () => { 
-      // Check if there's a hash on load
       const hash = window.location.hash.replace('#', '');
       if (hash && ['directories', 'business', 'build'].includes(hash)) {
         navigateTo(hash, true);
