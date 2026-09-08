@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Directory Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230d1b2a'/><text x='50' y='68' font-family='Arial' font-size='42' font-weight='bold' text-anchor='middle' fill='white'>KE</text></svg>">
 </head>
 <body>
   <div class="dashboard-header">
     <h1>📋 Directory Dashboard</h1>
     <div class="dashboard-nav">
-      <button id="navDirectories" class="active" onclick="showDirectories()">Directories</button>
-      <button id="navBusiness" onclick="showBusinessPages()">Business Pages</button>
-      <button id="navBuild" onclick="showBuildStatus()">Build Status</button>
+      <button id="navDirectories" class="active" onclick="navigateTo('directories')">Directories</button>
+      <button id="navBusiness" onclick="navigateTo('business')">Business Pages</button>
+      <button id="navBuild" onclick="navigateTo('build')">Build Status</button>
       <button onclick="logout().then(() => window.location.href='index.html')">Logout</button>
     </div>
   </div>
@@ -35,25 +36,152 @@
   <script src="js/publish.js"></script>
 
   <script>
+    // Navigation state management
+    let currentView = 'directories';
+    let viewHistory = ['directories'];
+    let isNavigating = false;
+
+    function navigateTo(view, replace = false) {
+      if (isNavigating) return;
+      isNavigating = true;
+
+      currentView = view;
+      
+      if (!replace) {
+        viewHistory.push(view);
+      }
+
+      // Update active nav
+      document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
+      document.getElementById('navBusiness').classList.toggle('active', view === 'business');
+      document.getElementById('navBuild').classList.toggle('active', view === 'build');
+
+      // Add browser history entry (only if not replace)
+      if (!replace) {
+        history.pushState({ view: view, historyIndex: viewHistory.length - 1 }, '', '#' + view);
+      } else {
+        history.replaceState({ view: view, historyIndex: viewHistory.length - 1 }, '', '#' + view);
+      }
+
+      // Load the view
+      if (view === 'directories') loadDirectoryList();
+      else if (view === 'business') showBusinessList();
+      else if (view === 'build') loadBuildStatus();
+
+      // Preserve scroll position
+      setTimeout(() => {
+        const savedScroll = sessionStorage.getItem('scroll_' + view);
+        if (savedScroll) window.scrollTo(0, parseInt(savedScroll));
+      }, 100);
+
+      isNavigating = false;
+    }
+
+    function goBack() {
+      if (isNavigating) return;
+      
+      // Don't go back if we're at the root
+      if (viewHistory.length <= 1) {
+        // If at root, stay on current view
+        return;
+      }
+
+      isNavigating = true;
+      
+      // Remove current view from history
+      viewHistory.pop();
+      
+      // Get the previous view
+      const previousView = viewHistory[viewHistory.length - 1] || 'directories';
+      
+      // Update navigation
+      currentView = previousView;
+      
+      document.getElementById('navDirectories').classList.toggle('active', previousView === 'directories');
+      document.getElementById('navBusiness').classList.toggle('active', previousView === 'business');
+      document.getElementById('navBuild').classList.toggle('active', previousView === 'build');
+
+      // Replace history state to avoid duplicate entries
+      history.replaceState({ view: previousView, historyIndex: viewHistory.length - 1 }, '', '#' + previousView);
+
+      // Load the view
+      if (previousView === 'directories') loadDirectoryList();
+      else if (previousView === 'business') showBusinessList();
+      else if (previousView === 'build') loadBuildStatus();
+
+      isNavigating = false;
+    }
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function(e) {
+      if (isNavigating) return;
+      
+      if (e.state && e.state.view) {
+        const view = e.state.view;
+        const historyIndex = e.state.historyIndex || 0;
+        
+        // Trim history if we went back
+        if (historyIndex < viewHistory.length - 1) {
+          viewHistory = viewHistory.slice(0, historyIndex + 1);
+        }
+        
+        currentView = view;
+        
+        document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
+        document.getElementById('navBusiness').classList.toggle('active', view === 'business');
+        document.getElementById('navBuild').classList.toggle('active', view === 'build');
+        
+        if (view === 'directories') loadDirectoryList();
+        else if (view === 'business') showBusinessList();
+        else if (view === 'build') loadBuildStatus();
+      } else {
+        // If no state, try to recover
+        const hash = window.location.hash.replace('#', '');
+        if (hash && ['directories', 'business', 'build'].includes(hash)) {
+          navigateTo(hash, true);
+        } else {
+          // Default to directories
+          navigateTo('directories', true);
+        }
+      }
+    });
+
+    // Save scroll position on scroll
+    window.addEventListener('scroll', function() {
+      if (currentView) {
+        sessionStorage.setItem('scroll_' + currentView, window.scrollY.toString());
+      }
+    });
+
     function showDirectories() {
-      document.getElementById('navDirectories').classList.add('active');
-      document.getElementById('navBusiness').classList.remove('active');
-      document.getElementById('navBuild').classList.remove('active');
-      loadDirectoryList();
+      navigateTo('directories');
     }
+
     function showBuildStatus() {
-      document.getElementById('navDirectories').classList.remove('active');
-      document.getElementById('navBusiness').classList.remove('active');
-      document.getElementById('navBuild').classList.add('active');
-      loadBuildStatus();
+      navigateTo('build');
     }
+
     function showBusinessPages() {
-      document.getElementById('navDirectories').classList.remove('active');
-      document.getElementById('navBusiness').classList.add('active');
-      document.getElementById('navBuild').classList.remove('active');
-      if (typeof showBusinessList === 'function') showBusinessList();
+      navigateTo('business');
     }
-    document.addEventListener('DOMContentLoaded', () => { loadDirectoryList(); });
+
+    // Override the edit functions to push history state properly
+    // This will be called from listings.js and directories.js
+    window.pushViewState = function(view, subView) {
+      const state = { view: view, subView: subView };
+      viewHistory.push(view);
+      history.pushState(state, '', '#' + view + '/' + subView);
+    };
+
+    document.addEventListener('DOMContentLoaded', () => { 
+      // Check if there's a hash on load
+      const hash = window.location.hash.replace('#', '');
+      if (hash && ['directories', 'business', 'build'].includes(hash)) {
+        navigateTo(hash, true);
+      } else {
+        navigateTo('directories', true);
+      }
+    });
   </script>
 </body>
 </html>
