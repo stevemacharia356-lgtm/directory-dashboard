@@ -1,6 +1,14 @@
 function showBusinessList() {
   const content = document.getElementById('content');
-  content.innerHTML = '<h2>Business Pages</h2><div style="margin-bottom:1rem;"><button class="btn-primary" onclick="showCreateBusinessForm()" style="width:auto;">+ Create Business Page</button></div><div id="businessList" class="card-grid"></div>';
+  content.innerHTML = '<div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;"><button class="back-button-header" onclick="goBackView()" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.2rem;">←</button><h2>Business Pages</h2></div><div style="margin-bottom:1rem;"><button class="btn-primary" onclick="showCreateBusinessForm()" style="width:auto;">+ Create Business Page</button></div><div id="businessList" class="card-grid"></div>';
+
+  // Add to navigation history
+  if (typeof navigateToView === 'function') {
+    navigateToView('business', null);
+  }
+  if (typeof updateBackButtonVisibility === 'function') {
+    updateBackButtonVisibility();
+  }
 
   db.collection('businesses').onSnapshot((snapshot) => {
     const businesses = [];
@@ -8,7 +16,11 @@ function showBusinessList() {
     const container = document.getElementById('businessList');
     if (!container) return;
     if (businesses.length === 0) { container.innerHTML = '<p style="color:#666;">No business pages yet.</p>'; return; }
-    container.innerHTML = businesses.map(b => '<div class="card"><span class="status-badge status-' + (b.status === 'published' ? 'published' : 'draft') + '">' + b.status + '</span><span class="status-badge ' + (b.verified ? 'status-published' : 'status-draft') + '" style="margin-left:0.5rem;">' + (b.verified ? '✓ Verified' : 'Free') + '</span><h3>' + b.name + '</h3><p style="color:#666;">' + (b.location || '') + '</p><p style="color:#666;">' + (b.tagline || '') + '</p><div style="display:flex; gap:0.5rem; margin-top:0.5rem;"><button class="btn-secondary" onclick="editBusiness(\'' + b.id + '\')">Edit</button>' + (b.status === 'draft' ? '<button class="btn-success" onclick="publishBusiness(\'' + b.id + '\')">Publish</button>' : '<button class="btn-secondary" onclick="unpublishBusiness(\'' + b.id + '\')">Unpublish</button>') + '<button class="btn-danger" onclick="deleteBusiness(\'' + b.id + '\')">Delete</button></div></div>').join('');
+    container.innerHTML = businesses.map(b => '<div class="card"><span class="status-badge status-' + (b.status === 'published' ? 'published' : 'draft') + '">' + b.status + '</span><span class="status-badge ' + (b.verified ? 'status-published' : 'status-draft') + '" style="margin-left:0.5rem;">' + (b.verified ? '✓ Verified' : 'Free') + '</span><h3>' + b.name + '</h3><p style="color:#666;">' + (b.location || '') + '</p><p style="color:#666;">' + (b.tagline || '') + '</p><div style="display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap;"><button class="btn-secondary" onclick="editBusiness(\'' + b.id + '\')">Edit</button>' + (b.status === 'draft' ? '<button class="btn-success" onclick="publishBusiness(\'' + b.id + '\')">Publish</button>' : '<button class="btn-secondary" onclick="unpublishBusiness(\'' + b.id + '\')">Unpublish</button>') + '<button class="btn-danger" onclick="deleteBusiness(\'' + b.id + '\')">Delete</button></div></div>').join('');
+    
+    if (typeof updateBackButtonVisibility === 'function') {
+      updateBackButtonVisibility();
+    }
   });
 }
 
@@ -16,8 +28,13 @@ function buildBusinessForm(data, slug) {
   const d = data || {};
   const faqRows = (d.faqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="bizFaqQ' + idx + '"></div><div class="form-group"><textarea id="bizFaqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('');
 
+  // Add to navigation history
+  if (typeof navigateToView === 'function') {
+    navigateToView('business-detail', null);
+  }
+
   const content = document.getElementById('content');
-  content.innerHTML = '<h2>' + (slug ? 'Edit' : 'Create') + ' Business Page</h2><div class="card">' +
+  content.innerHTML = '<div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;"><button class="back-button-header" onclick="goBackView()" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.2rem;">←</button><h2>' + (slug ? 'Edit' : 'Create') + ' Business Page</h2></div><div class="card">' +
     '<div class="form-group"><label>Business Name *</label><input type="text" id="bizName" value="' + (d.name || '') + '" oninput="updateBizSlug()"></div>' +
     '<div class="form-group"><label>Location *</label><input type="text" id="bizLocation" value="' + (d.location || '') + '" oninput="updateBizSlug()"></div>' +
     '<div class="form-group"><label>URL Slug (auto-generated)</label><input type="text" id="bizSlug" readonly style="background:#f5f5f5;" value="' + (slug || '') + '"></div>' +
@@ -46,7 +63,12 @@ function buildBusinessForm(data, slug) {
     '<button class="btn-primary" id="btnBizGenerateBlog" onclick="generateBizBlog(\'' + (slug || '') + '\')" style="width:auto; margin-bottom:1rem;">✨ Generate Blog with AI</button>' +
     '<div class="form-group"><label>Blog Title</label><input type="text" id="bizBlogTitle" value="' + ((d.blog && d.blog.title) || '') + '"></div>' +
     '<div class="form-group"><label>Blog Body</label><textarea id="bizBlogBody" style="min-height:150px;">' + ((d.blog && d.blog.body) || '') + '</textarea></div>' +
-    '<div style="display:flex; gap:1rem; margin-top:1rem;"><button class="btn-secondary" onclick="showBusinessList()">Cancel</button><button class="btn-secondary" id="btnBizDraft" onclick="saveBusiness(\'draft\', \'' + (slug || '') + '\')">Save as Draft</button><button class="btn-primary" id="btnBizPublish" onclick="saveBusiness(\'published\', \'' + (slug || '') + '\')">Save & Publish</button></div></div>';
+    '<div style="display:flex; gap:1rem; margin-top:1rem; flex-wrap:wrap;"><button class="btn-secondary" onclick="goBackView()">Cancel</button><button class="btn-secondary" id="btnBizDraft" onclick="saveBusiness(\'draft\', \'' + (slug || '') + '\')">Save as Draft</button><button class="btn-primary" id="btnBizPublish" onclick="saveBusiness(\'published\', \'' + (slug || '') + '\')">Save & Publish</button></div></div>';
+
+  // Update back button
+  if (typeof updateBackButtonVisibility === 'function') {
+    updateBackButtonVisibility();
+  }
 
   // Load existing gallery
   if (d.gallery && d.gallery.length > 0) {
@@ -181,10 +203,14 @@ function updateBizSlug() {
   document.getElementById('bizSlug').value = 'business-' + locationSlug + '-' + nameSlug;
 }
 
-function showCreateBusinessForm() { buildBusinessForm(null, ''); }
+function showCreateBusinessForm() { 
+  buildBusinessForm(null, ''); 
+}
 
 function editBusiness(slug) {
-  db.collection('businesses').doc(slug).get().then(doc => { if (doc.exists) buildBusinessForm(doc.data(), slug); });
+  db.collection('businesses').doc(slug).get().then(doc => { 
+    if (doc.exists) buildBusinessForm(doc.data(), slug); 
+  });
 }
 
 async function saveBusiness(status, existingSlug) {

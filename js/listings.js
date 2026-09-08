@@ -8,9 +8,17 @@ async function showListingForm(directorySlug, listingId) {
   window._dirLocation = dirData.locationDisplay || '';
   window._dirNiche = dirData.nicheDisplay || '';
 
+  // Add to navigation history
+  if (typeof navigateToView === 'function') {
+    navigateToView('listing-detail', null);
+  }
+
   const content = document.getElementById('content');
   content.innerHTML = `
-    <h2>${existingListing ? 'Edit' : 'Add'} Listing - ${dirData.nicheDisplay} in ${dirData.locationDisplay}</h2>
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">
+      <button class="back-button-header" onclick="goBackView()" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.2rem;">←</button>
+      <h2>${existingListing ? 'Edit' : 'Add'} Listing - ${dirData.nicheDisplay} in ${dirData.locationDisplay}</h2>
+    </div>
     
     <div class="card">
       <h3>Common Details</h3>
@@ -118,12 +126,17 @@ async function showListingForm(directorySlug, listingId) {
         <textarea id="blogBody" style="min-height:200px;">${existingListing?.blog?.body || ''}</textarea>
       </div>
 
-      <div style="display:flex; gap:1rem; margin-top:1rem;">
-        <button class="btn-secondary" onclick="editDirectory('${directorySlug}')">Cancel</button>
+      <div style="display:flex; gap:1rem; margin-top:1rem; flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="goBackView()">Cancel</button>
         <button class="btn-primary" id="saveListingBtn" onclick="saveListing('${directorySlug}', '${listingId || ''}')">Save Listing</button>
       </div>
     </div>
   `;
+
+  // Update back button
+  if (typeof updateBackButtonVisibility === 'function') {
+    updateBackButtonVisibility();
+  }
 
   const nicheContainer = document.getElementById('nicheSpecificContainer');
   const nicheForm = await renderNicheForm(dirData.nicheSlug, nicheContainer, existingListing?.nicheSpecific || {});
@@ -394,6 +407,7 @@ async function saveListing(directorySlug, listingId) {
       transaction.update(docRef, { listings: listings, lastEditedAt: now });
     });
 
+    // Go back to directory edit view after saving
     editDirectory(directorySlug);
   } catch (error) {
     console.error('Save failed:', error);
