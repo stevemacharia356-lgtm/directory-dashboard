@@ -38,203 +38,78 @@
   <script>
     // Navigation state management
     let currentView = 'directories';
-    let currentSubView = null;
     let viewHistory = ['directories'];
-    let isNavigating = false;
 
-    // Track if we're in a sub-view (like editing a listing)
-    window.isInSubView = function() {
-      return currentSubView !== null;
-    };
-
-    // Navigate to a main view
-    function navigateTo(view, replace = false) {
-      if (isNavigating) return;
-      isNavigating = true;
-
+    function navigateTo(view) {
       currentView = view;
-      currentSubView = null;
+      viewHistory.push(view);
       
-      if (!replace) {
-        viewHistory.push(view);
-      }
-
       // Update active nav
       document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
       document.getElementById('navBusiness').classList.toggle('active', view === 'business');
       document.getElementById('navBuild').classList.toggle('active', view === 'build');
-
+      
       // Add browser history entry
-      if (!replace) {
-        history.pushState({ view: view, subView: null, historyIndex: viewHistory.length - 1 }, '', '#' + view);
-      } else {
-        history.replaceState({ view: view, subView: null, historyIndex: viewHistory.length - 1 }, '', '#' + view);
-      }
-
+      history.pushState({ view: view }, '', '#' + view);
+      
       // Load the view
       if (view === 'directories') loadDirectoryList();
       else if (view === 'business') showBusinessList();
       else if (view === 'build') loadBuildStatus();
-
-      isNavigating = false;
     }
 
-    // Navigate to a sub-view (like edit listing)
-    window.navigateToSubView = function(view, subView, data) {
-      if (isNavigating) return;
-      isNavigating = true;
-
-      currentView = view;
-      currentSubView = subView;
-      
-      // Push to history
-      viewHistory.push(view + '_' + subView);
-      
-      // Update nav buttons
-      document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
-      document.getElementById('navBusiness').classList.toggle('active', view === 'business');
-      document.getElementById('navBuild').classList.toggle('active', view === 'build');
-
-      // Push state with sub-view info
-      history.pushState({ 
-        view: view, 
-        subView: subView, 
-        data: data,
-        historyIndex: viewHistory.length - 1 
-      }, '', '#' + view + '/' + subView);
-
-      isNavigating = false;
-    };
-
-    // Go back function
     function goBack() {
-      if (isNavigating) return;
-      
-      // If we're in a sub-view, go back to the main view
-      if (currentSubView) {
-        isNavigating = true;
-        
-        // Reset sub-view
-        currentSubView = null;
-        
-        // Pop the sub-view from history
-        viewHistory.pop();
-        
-        // Get the main view
-        const mainView = currentView;
-        
-        // Update nav
-        document.getElementById('navDirectories').classList.toggle('active', mainView === 'directories');
-        document.getElementById('navBusiness').classList.toggle('active', mainView === 'business');
-        document.getElementById('navBuild').classList.toggle('active', mainView === 'build');
-
-        // Replace history to remove sub-view
-        history.replaceState({ 
-          view: mainView, 
-          subView: null, 
-          historyIndex: viewHistory.length - 1 
-        }, '', '#' + mainView);
-
-        // Reload the main view
-        if (mainView === 'directories') loadDirectoryList();
-        else if (mainView === 'business') showBusinessList();
-        else if (mainView === 'build') loadBuildStatus();
-
-        isNavigating = false;
-        return;
-      }
-
-      // If we're at root, stay
-      if (viewHistory.length <= 1) {
-        return;
-      }
-
-      isNavigating = true;
-      
       viewHistory.pop();
       const previousView = viewHistory[viewHistory.length - 1] || 'directories';
-      
-      currentView = previousView;
-      currentSubView = null;
       
       document.getElementById('navDirectories').classList.toggle('active', previousView === 'directories');
       document.getElementById('navBusiness').classList.toggle('active', previousView === 'business');
       document.getElementById('navBuild').classList.toggle('active', previousView === 'build');
-
-      history.replaceState({ view: previousView, subView: null, historyIndex: viewHistory.length - 1 }, '', '#' + previousView);
-
+      
       if (previousView === 'directories') loadDirectoryList();
       else if (previousView === 'business') showBusinessList();
       else if (previousView === 'build') loadBuildStatus();
-
-      isNavigating = false;
     }
 
-    // Handle browser back/forward
+    // Handle browser back button
     window.addEventListener('popstate', function(e) {
-      if (isNavigating) return;
-      
       if (e.state && e.state.view) {
         const view = e.state.view;
-        const subView = e.state.subView || null;
-        const historyIndex = e.state.historyIndex || 0;
-        
-        if (historyIndex < viewHistory.length - 1) {
-          viewHistory = viewHistory.slice(0, historyIndex + 1);
-        }
-        
-        currentView = view;
-        currentSubView = subView;
-        
+        viewHistory.pop();
         document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
         document.getElementById('navBusiness').classList.toggle('active', view === 'business');
         document.getElementById('navBuild').classList.toggle('active', view === 'build');
         
-        if (view === 'directories') {
-          if (subView) {
-            // Handle sub-view restoration if needed
-            loadDirectoryList();
-          } else {
-            loadDirectoryList();
-          }
-        } else if (view === 'business') {
-          showBusinessList();
-        } else if (view === 'build') {
-          loadBuildStatus();
-        }
-      } else {
-        const hash = window.location.hash.replace('#', '');
-        if (hash && ['directories', 'business', 'build'].includes(hash)) {
-          navigateTo(hash, true);
-        } else {
-          navigateTo('directories', true);
-        }
+        if (view === 'directories') loadDirectoryList();
+        else if (view === 'business') showBusinessList();
+        else if (view === 'build') loadBuildStatus();
       }
     });
 
     function showDirectories() {
-      navigateTo('directories');
+      document.getElementById('navDirectories').classList.add('active');
+      document.getElementById('navBusiness').classList.remove('active');
+      document.getElementById('navBuild').classList.remove('active');
+      loadDirectoryList();
     }
 
     function showBuildStatus() {
-      navigateTo('build');
+      document.getElementById('navDirectories').classList.remove('active');
+      document.getElementById('navBusiness').classList.remove('active');
+      document.getElementById('navBuild').classList.add('active');
+      loadBuildStatus();
     }
 
     function showBusinessPages() {
-      navigateTo('business');
+      document.getElementById('navDirectories').classList.remove('active');
+      document.getElementById('navBusiness').classList.add('active');
+      document.getElementById('navBuild').classList.remove('active');
+      if (typeof showBusinessList === 'function') showBusinessList();
     }
 
-    // Expose for other scripts
-    window.goBack = goBack;
-    window.navigateTo = navigateTo;
-
     document.addEventListener('DOMContentLoaded', () => { 
-      const hash = window.location.hash.replace('#', '');
-      if (hash && ['directories', 'business', 'build'].includes(hash)) {
-        navigateTo(hash, true);
-      } else {
-        navigateTo('directories', true);
-      }
+      loadDirectoryList(); 
+      history.replaceState({ view: 'directories' }, '', '#directories');
     });
   </script>
 </body>

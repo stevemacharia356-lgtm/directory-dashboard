@@ -1,6 +1,5 @@
 // Global state
 let activeTab = 'published';
-let currentDirectorySlug = null;
 
 // Load directory list with Published/Drafts tabs
 function loadDirectoryList() {
@@ -123,41 +122,13 @@ async function saveDirectory(status) {
 }
 
 function editDirectory(slug) {
-  // Store current directory and push sub-view state
-  currentDirectorySlug = slug;
-  
-  // Push sub-view state for listing list
-  if (typeof navigateToSubView === 'function') {
-    navigateToSubView('directories', 'listing_list', { directorySlug: slug });
-  }
-
   db.collection('directories').doc(slug).get().then(doc => {
     const data = doc.data();
     let displayTitle = data.nicheDisplay + ' in ' + data.locationDisplay;
     if (data.categoryTag) displayTitle = data.categoryTag + ' ' + data.nicheDisplay + ' in ' + data.locationDisplay;
     const content = document.getElementById('content');
-    content.innerHTML = '<h2>Edit: ' + displayTitle + '</h2><span class="status-badge status-' + (data.status === 'published' ? 'published' : 'draft') + '">' + data.status + '</span><div class="card" style="margin-top:1rem;"><div class="form-group"><label>Location Description</label><textarea id="editDescription">' + (data.locationDescription || '') + '</textarea></div><div class="form-group"><label>Hero Image</label><input type="file" id="editHeroFile" accept="image/*"><div id="heroPreview">' + (data.heroImage ? '<img src="' + data.heroImage + '" alt="' + (data.heroImageAlt || '') + '" class="image-preview">' : '') + '</div></div><div class="form-group"><label>Hero Alt Text</label><input type="text" id="editHeroAlt" value="' + (data.heroImageAlt || '') + '"></div><button class="btn-primary" id="btnUpdateDir" onclick="updateDirectory(\'' + slug + '\')">Update Directory</button>' + (data.status === 'draft' ? '<button class="btn-success" id="btnPubNow" onclick="changeDirectoryStatus(\'' + slug + '\', \'published\')">Publish Now</button>' : '<button class="btn-secondary" id="btnUnpub" onclick="changeDirectoryStatus(\'' + slug + '\', \'draft\')">Unpublish</button>') + '</div><h3 style="margin-top:1.5rem;">Listings (' + ((data.listings || []).length) + '/10)</h3><button class="btn-primary" onclick="showListingForm(\'' + slug + '\')" style="width:auto;">+ Add Listing</button><div id="listingsList" style="margin-top:1rem;">' + (data.listings || []).map((listing, idx) => '<div class="listing-item" onclick="showListingForm(\'' + slug + '\', \'' + listing.id + '\')"><img src="' + (listing.thumbnail || '') + '" alt="' + (listing.thumbnailAlt || '') + '"><div class="listing-item-info"><h3>' + listing.name + '</h3><p>' + (listing.priceCategory || 'No price') + ' | ' + (listing.phoneDisplay || '') + '</p></div><button class="btn-danger" onclick="event.stopPropagation(); deleteListing(\'' + slug + '\', \'' + listing.id + '\')">Delete</button></div>').join('') + '</div><h3 style="margin-top:1.5rem;">Global FAQs</h3><div id="globalFaqsContainer">' + (data.globalFaqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="faqQ' + idx + '"></div><div class="form-group"><textarea id="faqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('') + '</div><button class="btn-secondary" onclick="addGlobalFaqRow()">+ Add FAQ</button><button class="btn-primary" id="btnSaveFaqs" onclick="saveGlobalFaqs(\'' + slug + '\')" style="margin-top:1rem;">Save FAQs</button><div style="margin-top:1.5rem;"><button class="btn-secondary" onclick="goBackFromDirectoryList()">← Back to Directories</button></div>';
+    content.innerHTML = '<h2>Edit: ' + displayTitle + '</h2><span class="status-badge status-' + (data.status === 'published' ? 'published' : 'draft') + '">' + data.status + '</span><div class="card" style="margin-top:1rem;"><div class="form-group"><label>Location Description</label><textarea id="editDescription">' + (data.locationDescription || '') + '</textarea></div><div class="form-group"><label>Hero Image</label><input type="file" id="editHeroFile" accept="image/*"><div id="heroPreview">' + (data.heroImage ? '<img src="' + data.heroImage + '" alt="' + (data.heroImageAlt || '') + '" class="image-preview">' : '') + '</div></div><div class="form-group"><label>Hero Alt Text</label><input type="text" id="editHeroAlt" value="' + (data.heroImageAlt || '') + '"></div><button class="btn-primary" id="btnUpdateDir" onclick="updateDirectory(\'' + slug + '\')">Update Directory</button>' + (data.status === 'draft' ? '<button class="btn-success" id="btnPubNow" onclick="changeDirectoryStatus(\'' + slug + '\', \'published\')">Publish Now</button>' : '<button class="btn-secondary" id="btnUnpub" onclick="changeDirectoryStatus(\'' + slug + '\', \'draft\')">Unpublish</button>') + '</div><h3 style="margin-top:1.5rem;">Listings (' + ((data.listings || []).length) + '/10)</h3><button class="btn-primary" onclick="showListingForm(\'' + slug + '\')" style="width:auto;">+ Add Listing</button><div id="listingsList" style="margin-top:1rem;">' + (data.listings || []).map((listing, idx) => '<div class="listing-item" onclick="showListingForm(\'' + slug + '\', \'' + listing.id + '\')"><img src="' + (listing.thumbnail || '') + '" alt="' + (listing.thumbnailAlt || '') + '"><div class="listing-item-info"><h3>' + listing.name + '</h3><p>' + (listing.priceCategory || 'No price') + ' | ' + (listing.phoneDisplay || '') + '</p></div><button class="btn-danger" onclick="event.stopPropagation(); deleteListing(\'' + slug + '\', \'' + listing.id + '\')">Delete</button></div>').join('') + '</div><h3 style="margin-top:1.5rem;">Global FAQs</h3><div id="globalFaqsContainer">' + (data.globalFaqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="faqQ' + idx + '"></div><div class="form-group"><textarea id="faqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('') + '</div><button class="btn-secondary" onclick="addGlobalFaqRow()">+ Add FAQ</button><button class="btn-primary" id="btnSaveFaqs" onclick="saveGlobalFaqs(\'' + slug + '\')" style="margin-top:1rem;">Save FAQs</button><div style="margin-top:1.5rem;"><button class="btn-secondary" onclick="loadDirectoryList()">← Back to Directories</button></div>';
   });
-}
-
-// Go back from directory listing list to directories tab
-function goBackFromDirectoryList() {
-  currentDirectorySlug = null;
-  if (typeof goBack === 'function') {
-    goBack();
-  } else {
-    loadDirectoryList();
-  }
-}
-
-// Go back from listing form to listing list
-function goBackFromListing(directorySlug) {
-  // Restore the listing list view
-  if (typeof goBack === 'function') {
-    goBack();
-  } else {
-    editDirectory(directorySlug);
-  }
 }
 
 async function updateDirectory(slug) {
