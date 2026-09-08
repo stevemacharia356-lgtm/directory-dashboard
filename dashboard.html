@@ -2,14 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>Directory Dashboard</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230d1b2a'/><text x='50' y='68' font-family='Arial' font-size='42' font-weight='bold' text-anchor='middle' fill='white'>KE</text></svg>">
 </head>
 <body>
+  <!-- Mobile Back Button (hidden by default, shows when history > 1) -->
+  <button id="backButton" class="back-button" style="display:none;" onclick="goBack()">
+    ←
+  </button>
+
   <div class="dashboard-header">
-    <h1>📋 Directory Dashboard</h1>
+    <div class="header-left">
+      <button id="backButtonHeader" class="back-button-header" style="display:none;" onclick="goBack()">
+        ←
+      </button>
+      <h1>📋 Directory Dashboard</h1>
+    </div>
     <div class="dashboard-nav">
       <button id="navDirectories" class="active" onclick="navigateTo('directories')">Directories</button>
       <button id="navBusiness" onclick="navigateTo('business')">Business Pages</button>
@@ -39,8 +49,36 @@
     // Navigation state management
     let currentView = 'directories';
     let viewHistory = ['directories'];
+    let viewStack = []; // Track views for back navigation
+
+    // Check if we're on mobile
+    function isMobile() {
+      return window.innerWidth <= 768;
+    }
+
+    // Update back button visibility
+    function updateBackButton() {
+      const showBack = viewHistory.length > 1;
+      const backBtn = document.getElementById('backButton');
+      const backHeader = document.getElementById('backButtonHeader');
+      
+      if (isMobile()) {
+        // On mobile: show floating back button
+        backBtn.style.display = showBack ? 'flex' : 'none';
+        backHeader.style.display = 'none';
+      } else {
+        // On desktop: show back button in header
+        backBtn.style.display = 'none';
+        backHeader.style.display = showBack ? 'inline-flex' : 'none';
+      }
+    }
 
     function navigateTo(view) {
+      // Don't push duplicate views
+      if (viewHistory[viewHistory.length - 1] === view) {
+        return;
+      }
+      
       currentView = view;
       viewHistory.push(view);
       
@@ -56,26 +94,51 @@
       if (view === 'directories') loadDirectoryList();
       else if (view === 'business') showBusinessList();
       else if (view === 'build') loadBuildStatus();
+      
+      // Update back button
+      updateBackButton();
     }
 
     function goBack() {
+      if (viewHistory.length <= 1) {
+        return; // Can't go back further
+      }
+      
+      // Pop current view
       viewHistory.pop();
       const previousView = viewHistory[viewHistory.length - 1] || 'directories';
+      currentView = previousView;
       
+      // Update nav buttons
       document.getElementById('navDirectories').classList.toggle('active', previousView === 'directories');
       document.getElementById('navBusiness').classList.toggle('active', previousView === 'business');
       document.getElementById('navBuild').classList.toggle('active', previousView === 'build');
       
+      // Load previous view
       if (previousView === 'directories') loadDirectoryList();
       else if (previousView === 'business') showBusinessList();
       else if (previousView === 'build') loadBuildStatus();
+      
+      // Update back button
+      updateBackButton();
+      
+      // Update URL
+      history.pushState({ view: previousView }, '', '#' + previousView);
     }
 
     // Handle browser back button
     window.addEventListener('popstate', function(e) {
       if (e.state && e.state.view) {
         const view = e.state.view;
-        viewHistory.pop();
+        // Find if view exists in history
+        const index = viewHistory.indexOf(view);
+        if (index !== -1) {
+          viewHistory = viewHistory.slice(0, index + 1);
+        } else {
+          viewHistory.push(view);
+        }
+        currentView = view;
+        
         document.getElementById('navDirectories').classList.toggle('active', view === 'directories');
         document.getElementById('navBusiness').classList.toggle('active', view === 'business');
         document.getElementById('navBuild').classList.toggle('active', view === 'build');
@@ -83,7 +146,14 @@
         if (view === 'directories') loadDirectoryList();
         else if (view === 'business') showBusinessList();
         else if (view === 'build') loadBuildStatus();
+        
+        updateBackButton();
       }
+    });
+
+    // Handle window resize (mobile/desktop toggle)
+    window.addEventListener('resize', function() {
+      updateBackButton();
     });
 
     function showDirectories() {
@@ -107,9 +177,18 @@
       if (typeof showBusinessList === 'function') showBusinessList();
     }
 
+    // Override functions that navigate to sub-views (like edit listing)
+    // These will be called from listings.js and business.js
+    const originalNavigateTo = navigateTo;
+    
+    // Expose navigateTo globally
+    window.navigateTo = navigateTo;
+    window.goBack = goBack;
+    
     document.addEventListener('DOMContentLoaded', () => { 
       loadDirectoryList(); 
       history.replaceState({ view: 'directories' }, '', '#directories');
+      updateBackButton();
     });
   </script>
 </body>
