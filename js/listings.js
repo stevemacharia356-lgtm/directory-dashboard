@@ -8,6 +8,15 @@ async function showListingForm(directorySlug, listingId) {
   window._dirLocation = dirData.locationDisplay || '';
   window._dirNiche = dirData.nicheDisplay || '';
 
+  // Store current directory for back navigation
+  window._currentDirectorySlug = directorySlug;
+  window._currentListingId = listingId;
+
+  // Push sub-view state for back button
+  if (typeof navigateToSubView === 'function') {
+    navigateToSubView('directories', 'edit_listing', { directorySlug: directorySlug, listingId: listingId });
+  }
+
   const content = document.getElementById('content');
   content.innerHTML = `
     <h2>${existingListing ? 'Edit' : 'Add'} Listing - ${dirData.nicheDisplay} in ${dirData.locationDisplay}</h2>
@@ -119,7 +128,7 @@ async function showListingForm(directorySlug, listingId) {
       </div>
 
       <div style="display:flex; gap:1rem; margin-top:1rem;">
-        <button class="btn-secondary" onclick="editDirectory('${directorySlug}')">Cancel</button>
+        <button class="btn-secondary" onclick="goBackFromListing('${directorySlug}')">Cancel</button>
         <button class="btn-primary" id="saveListingBtn" onclick="saveListing('${directorySlug}', '${listingId || ''}')">Save Listing</button>
       </div>
     </div>
@@ -138,6 +147,21 @@ async function showListingForm(directorySlug, listingId) {
     });
   }
   window._galleryCounter = existingListing?.gallery ? existingListing.gallery.length : 0;
+}
+
+// Go back from listing form to directory view
+function goBackFromListing(directorySlug) {
+  // Reset sub-view state
+  window._currentDirectorySlug = null;
+  window._currentListingId = null;
+  
+  // Use the global goBack function
+  if (typeof goBack === 'function') {
+    goBack();
+  } else {
+    // Fallback: go to directory
+    editDirectory(directorySlug);
+  }
 }
 
 async function generateSummary() {
@@ -394,7 +418,8 @@ async function saveListing(directorySlug, listingId) {
       transaction.update(docRef, { listings: listings, lastEditedAt: now });
     });
 
-    editDirectory(directorySlug);
+    // Go back to directory view after saving
+    goBackFromListing(directorySlug);
   } catch (error) {
     console.error('Save failed:', error);
     if (btn) { btn.disabled = false; btn.textContent = 'Save Listing'; }
