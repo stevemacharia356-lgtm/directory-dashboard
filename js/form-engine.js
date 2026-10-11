@@ -48,36 +48,114 @@ const NICHE_FIELDS = {
   ]
 };
 
-// Dynamic fields cache
+// ============================================
+// DYNAMIC NICHE FIELDS — CACHE + PERSISTENCE
+// ============================================
+
+// In-memory cache (session only)
 let dynamicFieldsCache = {};
 
-// Fetch niche-specific fields from Gemini
-async function fetchNicheFields(nicheName) {
-  const key = nicheName.toLowerCase();
-  if (dynamicFieldsCache[key]) return dynamicFieldsCache[key];
+// Cached field definitions loaded from Firestore
+let persistedFieldsCache = {};
 
+// ============================================
+// FIRESTORE HELPERS — Save/load field definitions
+// ============================================
+
+/**
+ * Save niche field definitions to Firestore under a dedicated collection.
+ * Collection: nicheFields/{nicheSlug}
+ * Document: { nicheSlug, fields: [...], createdAt, updatedAt }
+ */
+async function saveNicheFieldsToFirestore(nicheSlug, fields) {
+  const key = nicheSlug.toLowerCase();
+  const docRef = db.collection('nicheFields').doc(key);
+  try {
+    const doc = await docRef.get();
+    if (doc.exists) {
+      // Already saved — don't overwrite (Option A: fields never regenerate)
+      console.log('Niche fields already saved for:', key);
+      return doc.data().fields;
+    }
+    // First time — save
+    await docRef.set({
+      nicheSlug: key,
+      fields: fields,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    console.log('Saved new niche fields to Firestore:', key);
+    return fields;
+  } catch (error) {
+    console.error('Failed to save niche fields:', error);
+    return fields;
+  }
+}
+
+/**
+ * Load niche field definitions from Firestore.
+ * Returns null if not found.
+ */
+async function loadNicheFieldsFromFirestore(nicheSlug) {
+  const key = nicheSlug.toLowerCase();
+  if (persistedFieldsCache[key]) return persistedFieldsCache[key];
+  try {
+    const doc = await db.collection('nicheFields').doc(key).get();
+    if (doc.exists) {
+      const data = doc.data();
+      persistedFieldsCache[key] = data.fields;
+      return data.fields;
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to load niche fields:', error);
+    return null;
+  }
+}
+
+// ============================================
+// FETCH FROM GEMINI (only when nothing is cached)
+// ============================================
+
+async function fetchNicheFieldsFromGemini(nicheName) {
   const getFieldsFn = functions.httpsCallable('getNicheFields');
   const result = await getFieldsFn({ nicheName: nicheName });
   const fields = result.data.fields || [];
-  
   // Add nicheSpecificKey to each field
   fields.forEach(f => { f.nicheSpecificKey = f.fieldName; });
-  
-  dynamicFieldsCache[key] = fields;
   return fields;
 }
 
-// Render niche-specific form fields dynamically
+// ============================================
+// MAIN — RENDER NICHE FORM
+// ============================================
+
 async function renderNicheForm(nicheSlug, containerElement, existingData) {
   containerElement.innerHTML = '';
-  
+
   let fields = NICHE_FIELDS[nicheSlug];
-  
+
   if (!fields) {
-    // Custom niche — fetch from Gemini
+    // Custom niche — try Firestore cache first, then Gemini
     containerElement.innerHTML = '<p style="color:#666;">Loading fields for ' + nicheSlug + '...</p>';
     try {
-      fields = await fetchNicheFields(nicheSlug);
+      // STEP 1: Try in-memory cache
+      if (dynamicFieldsCache[nicheSlug]) {
+        fields = dynamicFieldsCache[nicheSlug];
+      } else {
+        // STEP 2: Try Firestore (persisted from previous save)
+        const savedFields = await loadNicheFieldsFromFirestore(nicheSlug);
+        if (savedFields) {
+          fields = savedFields;
+          dynamicFieldsCache[nicheSlug] = fields;
+        } else {
+          // STEP 3: Only call Gemini if nothing is saved
+          fields = await fetchNicheFieldsFromGemini(nicheSlug);
+          dynamicFieldsCache[nicheSlug] = fields;
+          // Save immediately so next edit uses the same fields
+          await saveNicheFieldsToFirestore(nicheSlug, fields);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch niche fields:', error);
       containerElement.innerHTML = '<div class="form-group"><label>Services / Products</label><input type="text" placeholder="Enter services comma separated"></div>';
