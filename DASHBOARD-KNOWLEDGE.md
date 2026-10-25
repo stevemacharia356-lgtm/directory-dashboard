@@ -1,4 +1,4 @@
-# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V1.5 (COMPLETE)
+# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V1.6 (COMPLETE)
 
 ## PROJECT OVERVIEW
 Vanilla JS mobile-friendly dashboard for managing directory listings and business pages. Connects to same Firestore and Storage as the engine. Deployed to admin-dashboard-dc821.web.app. Public site at kedirectory.co.ke.
@@ -14,8 +14,17 @@ admin-dashboard-dc821.web.app
 2. Business Pages — Manage standalone business pages (create, edit, publish, delete)
 3. Build Status — Trigger builds, view deployment status
 
-## DYNAMIC NICHES (UNLIMITED)
-Niche type is now a text input with suggestions. Type ANY business type — Nightclub, Supermarket, Gym, Salon, Pharmacy, Hardware, Church, Car Wash. Gemini generates the correct form fields for that niche automatically via getNicheFields Cloud Function.
+## DYNAMIC NICHES (UNLIMITED) & FIRESTORE PERSISTENCE
+Niche type is a text input. Type ANY business type.
+Gemini generates the correct form fields automatically via `getNicheFields`.
+**Custom Niche Persistence:** The field definitions are saved to Firestore (`nicheFields/{nicheSlug}`) so they NEVER regenerate when you edit the listing later.
+
+## STRICT GEMINI RULES (V1.6)
+- **Niche Fields:** Gemini is strictly forbidden from generating Location fields, Yes/No toggles, "Other" dropdown options, and Price fields.
+- **Safety Filter:** `js/form-engine.js` has a filter that strips out any field containing "price", "cost", "rate", or "fee".
+- **Location Description:** Strict MAX 100 words. MUST break into 2 short paragraphs.
+- **Business Summary:** 60-100 words.
+- **Blog Generator:** 400-600 words, EEAT rules.
 
 ## PRICE CATEGORIES
 Budget, Mid-range, Premium, Luxury — dropdown. Exact numeric price optional.
@@ -35,12 +44,6 @@ All buttons disable during operation. Prevents duplicate saves.
 ## TAB MEMORY
 Dashboard remembers active tab (Published/Drafts). After delete, publish, or unpublish, stays on the same tab.
 
-## GEMINI AI INTEGRATIONS (4 CLOUD FUNCTIONS)
-1. getNicheFields — Generates form fields per niche type
-2. generateLocationDescription — Generates location description from county, sub-county, niche
-3. generateBusinessSummary — Generates business summary with completeness check
-4. generateBlog — Generates SEO blog with keyword, standout, owner story, niche tone rules
-
 ## FOLDER STRUCTURE
 directory-dashboard/
 ├── index.html — Login page
@@ -48,67 +51,37 @@ directory-dashboard/
 ├── css/styles.css — Dashboard styles
 ├── js/firebase-config.js — Firebase initialization
 ├── js/auth.js — Auth state
-├── js/utils.js — Slug generation, validation, formatting
-├── js/form-engine.js — NICHE_FIELDS + dynamic Gemini fields
-├── js/image-upload.js — Direct upload with compression (800px, 70%)
-├── js/directories.js — Directory management with tab memory, location description button
-├── js/listings.js — Listing form with summary button, blog generator, completeness check
-├── js/business.js — Business pages with gallery, blog generator
-├── js/publish.js — Publish button, build status
-├── functions/index.js — processImage, triggerPublish, getNicheFields, generateLocationDescription, generateBusinessSummary, generateBlog
-├── firebase.json — Hosting config (no-cache JS/CSS)
-├── firestore.rules — Security rules
+├── js/utils.js — Slug generation, validation
+├── js/form-engine.js — NICHE_FIELDS + dynamic Gemini fields + strict price filter
+├── js/image-upload.js — Direct upload with compression
+├── js/directories.js — Directory management
+├── js/listings.js — Listing form with summary/blog generators
+├── js/business.js — Business pages with gallery
+├── js/publish.js — Publish button
+├── functions/index.js — 6 Cloud Functions
+├── firebase.json — Hosting + Firestore rules config
+├── firestore.rules — Security rules (includes nicheFields)
 └── KNOWLEDGE.md — This file
-
-## KEY FEATURES
-- Login with email/password (single admin)
-- Dynamic niche system — any business type works
-- Gemini generates form fields per niche
-- Gemini generates location descriptions
-- Gemini generates business summaries (with completeness check to prevent hallucination)
-- Gemini generates SEO blogs with niche tone rules (YMYL aware)
-- Verified toggle for premium listings
-- Photo gallery with dynamic categories and lightbox
-- Tab memory (stays on Drafts after delete)
-- Button locking prevents duplicates
-- Direct photo upload with compression
-- Coordinate validation (Kenya bounds)
-- Per-listing FAQs, global FAQs, business FAQs
-- Firestore transactions
-- Manual publish via Cloud Function
-- Build status indicator
 
 ## CLOUD FUNCTIONS (6 TOTAL)
 1. processImage — Storage trigger, converts images to WebP
 2. triggerPublish — GitHub repository_dispatch proxy
-3. getNicheFields — Gemini generates form fields per niche
-4. generateLocationDescription — Gemini generates location descriptions
-5. generateBusinessSummary — Gemini generates summaries with EEAT rules
-6. generateBlog — Gemini generates blogs with niche tone rules
-
-## GEMINI PROMPT HIGHLIGHTS
-- Niche tone rules: Health sounds professional, Nightclub sounds energetic, Supermarket sounds practical
-- Anti-robotic: No "I", "me", "we", "our". Third person only.
-- No hallucination: Use only provided details
-- YMYL aware: Health and finance get authoritative tone
-- Keyword targeting: Title, first 100 words, and subheading
-- Standout feature anchors the article
-- Owner story adds human element
+3. getNicheFields — Gemini generates clean fields (no location, no price, no toggles)
+4. generateLocationDescription — Generates max 100 words / 2 paragraphs
+5. generateBusinessSummary — Generates summaries with EEAT rules
+6. generateBlog — Generates blogs with niche tone rules
 
 ## SECURITY
 - Firestore rules: public read, write only authenticated admin
-- Collections: directories and businesses
+- Collections: directories, businesses, nicheFields
 - Firebase Auth: single admin
-- Gemini API key stored in Cloud Function environment
 
 ## WORKFLOW
 1. Login at admin-dashboard-dc821.web.app
 2. Create directory — type niche, location, county, sub-county
-3. Generate location description with AI
+3. Generate location description (Short, 2 paragraphs)
 4. Add listings — dynamic form per niche
-5. Generate summary with AI (requires name + some niche data)
-6. Generate blog with AI (requires summary + directions + keyword)
-7. Upload photos (compressed, gallery categories)
-8. Save as draft or publish
-9. Publish All Changes → engine rebuild
-10. Content live at kedirectory.co.ke
+5. Generate summary/blog with AI
+6. Upload photos
+7. Save as draft or publish
+8. Trigger build → engine rebuilds → live at kedirectory.co.ke
