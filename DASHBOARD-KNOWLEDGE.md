@@ -1,4 +1,4 @@
-# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V1.6 (COMPLETE)
+# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V1.7 (COMPLETE)
 
 ## PROJECT OVERVIEW
 Vanilla JS mobile-friendly dashboard for managing directory listings and business pages. Connects to same Firestore and Storage as the engine. Deployed to admin-dashboard-dc821.web.app. Public site at kedirectory.co.ke.
@@ -25,6 +25,12 @@ Gemini generates the correct form fields automatically via `getNicheFields`.
 - **Location Description:** Strict MAX 100 words. MUST break into 2 short paragraphs.
 - **Business Summary:** 60-100 words.
 - **Blog Generator:** 400-600 words, EEAT rules.
+
+## AI ASSISTANT (V1.7)
+- **New Cloud Function:** `askDirectoryAssistant`.
+- **RAG System:** Gemini acts as a Retrieval-Augmented Generation assistant.
+- **Listing Mode:** Reads ONLY the specific listing's data. If the answer isn't there, it politely tells the user to call the business's phone number.
+- **Directory Mode:** Reads ALL listings in the directory. Allows users to ask comparison questions (e.g., "Who has WiFi?", "Which is cheapest?").
 
 ## PRICE CATEGORIES
 Budget, Mid-range, Premium, Luxury — dropdown. Exact numeric price optional.
@@ -58,18 +64,19 @@ directory-dashboard/
 ├── js/listings.js — Listing form with summary/blog generators
 ├── js/business.js — Business pages with gallery
 ├── js/publish.js — Publish button
-├── functions/index.js — 6 Cloud Functions
+├── functions/index.js — 7 Cloud Functions
 ├── firebase.json — Hosting + Firestore rules config
 ├── firestore.rules — Security rules (includes nicheFields)
 └── KNOWLEDGE.md — This file
 
-## CLOUD FUNCTIONS (6 TOTAL)
+## CLOUD FUNCTIONS (7 TOTAL)
 1. processImage — Storage trigger, converts images to WebP
 2. triggerPublish — GitHub repository_dispatch proxy
 3. getNicheFields — Gemini generates clean fields (no location, no price, no toggles)
 4. generateLocationDescription — Generates max 100 words / 2 paragraphs
 5. generateBusinessSummary — Generates summaries with EEAT rules
 6. generateBlog — Generates blogs with niche tone rules
+7. askDirectoryAssistant — New AI FAQ assistant for the public website. Reads listing or directory data to answer visitor questions.
 
 ## SECURITY
 - Firestore rules: public read, write only authenticated admin
