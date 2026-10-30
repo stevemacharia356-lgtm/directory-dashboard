@@ -97,7 +97,8 @@ async function showListingForm(directorySlug, listingId) {
       <div id="listingFaqsContainer">
         ${(existingListing?.faqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="lfaqQ' + idx + '"></div><div class="form-group"><textarea id="lfaqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('')}
       </div>
-      <button class="btn-secondary" onclick="addListingFaqRow()">+ Add FAQ</button>
+      <button class="btn-primary" id="btnGenerateFaqs" onclick="generateFAQsForListing('${directorySlug}')" style="width:auto; margin-top:0.5rem;">✨ Generate FAQs with AI</button>
+      <button class="btn-secondary" onclick="addListingFaqRow()" style="margin-left:0.5rem;">+ Add FAQ</button>
 
       <h3 style="margin-top:1.5rem;">Blog Review</h3>
       <div class="form-group">
@@ -241,6 +242,57 @@ async function generateBlogForListing(directorySlug) {
   } catch (error) {
     console.error('Blog generation failed:', error);
     if (btn) { btn.disabled = false; btn.textContent = '✗ Failed. Try Again'; setTimeout(() => { btn.textContent = '✨ Generate Blog with AI'; }, 2500); }
+  }
+}
+
+async function generateFAQsForListing(directorySlug) {
+  const btn = document.getElementById('btnGenerateFaqs');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+
+  try {
+    const name = document.getElementById('listingName').value.trim();
+    const summary = document.getElementById('listingSummary').value.trim();
+    const phoneDisplay = document.getElementById('listingPhone').value.trim();
+    const directions = document.getElementById('listingDirections').value.trim();
+    const priceCategory = document.getElementById('listingPriceCategory').value;
+    const nicheSpecific = window._nicheForm ? window._nicheForm.getValues() : {};
+    const blogTitle = document.getElementById('blogTitle').value.trim();
+    const blogExcerpt = document.getElementById('blogExcerpt').value.trim();
+    const blogBody = document.getElementById('blogBody').value.trim();
+    const location = window._dirLocation || '';
+    const niche = window._dirNiche || priceCategory || 'business';
+
+    if (!name) {
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Generate FAQs with AI'; }
+      return;
+    }
+
+    const listingData = {
+      name: name, summary: summary, phoneDisplay: phoneDisplay,
+      directions: directions, priceCategory: priceCategory, nicheSpecific: nicheSpecific,
+      blog: { title: blogTitle || '', excerpt: blogExcerpt || '', body: blogBody || '' },
+      location: location, niche: niche, directorySlug: directorySlug
+    };
+
+    const generateFn = functions.httpsCallable('generateFAQs');
+    const result = await generateFn({ listingData: listingData });
+    const faqs = result.data.faqs || [];
+
+    const container = document.getElementById('listingFaqsContainer');
+    if (container) {
+      container.innerHTML = '';
+      faqs.forEach((faq, idx) => {
+        const row = document.createElement('div');
+        row.className = 'faq-row';
+        row.innerHTML = '<div class="form-group"><input id="lfaqQ' + idx + '" value="' + (faq.question || '').replace(/"/g, '&quot;') + '"></div><div class="form-group"><textarea id="lfaqA' + idx + '">' + (faq.answer || '') + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button>';
+        container.appendChild(row);
+      });
+    }
+
+    if (btn) { btn.textContent = '✓ Generated. Click again to regenerate'; setTimeout(() => { btn.disabled = false; btn.textContent = '✨ Generate FAQs with AI'; }, 2500); }
+  } catch (error) {
+    console.error('FAQ generation failed:', error);
+    if (btn) { btn.disabled = false; btn.textContent = '✗ Failed. Try Again'; setTimeout(() => { btn.textContent = '✨ Generate FAQs with AI'; }, 2500); }
   }
 }
 
