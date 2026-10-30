@@ -84,6 +84,7 @@ async function showListingForm(directorySlug, listingId) {
       <div class="form-group">
         <label>Photo Alt Text</label>
         <input type="text" id="listingPhotoAlt" value="${existingListing?.thumbnailAlt || ''}">
+        <button class="btn-secondary" id="btnGenThumbnailAlt" onclick="generateThumbnailAlt()" style="width:auto; margin-top:0.5rem;">✨ Generate Alt Text</button>
       </div>
 
       <h3 style="margin-top:1.5rem;">Photo Gallery (Premium/Verified)</h3>
@@ -296,6 +297,34 @@ async function generateFAQsForListing(directorySlug) {
   }
 }
 
+async function generateThumbnailAlt() {
+  const btn = document.getElementById('btnGenThumbnailAlt');
+  const fileInput = document.getElementById('listingPhoto');
+  const altInput = document.getElementById('listingPhotoAlt');
+
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    alert('Please select a thumbnail photo first, then click Generate Alt Text.');
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+
+  try {
+    const file = fileInput.files[0];
+    const { base64, mimeType } = await fileToBase64(file);
+    const businessName = document.getElementById('listingName').value.trim() || 'Business';
+    const niche = window._dirNiche || '';
+
+    const genFn = functions.httpsCallable('generatePhotoAltText');
+    const result = await genFn({ imageBase64: base64, mimeType: mimeType, businessName: businessName, niche: niche });
+    altInput.value = result.data.altText || '';
+    if (btn) { btn.textContent = '✓ Generated'; setTimeout(() => { btn.disabled = false; btn.textContent = '✨ Generate Alt Text'; }, 2000); }
+  } catch (error) {
+    console.error('Thumbnail alt text generation failed:', error);
+    if (btn) { btn.disabled = false; btn.textContent = '✗ Failed. Try Again'; setTimeout(() => { btn.textContent = '✨ Generate Alt Text'; }, 2000); }
+  }
+}
+
 function addGalleryCategoryWithData(categoryName, photos, catIdx) {
   const container = document.getElementById('galleryContainer');
   const div = document.createElement('div');
@@ -307,7 +336,7 @@ function addGalleryCategoryWithData(categoryName, photos, catIdx) {
   div.style.margin = '0.5rem 0';
   let photosHtml = '';
   photos.forEach(photo => {
-    photosHtml += '<img src="' + photo.src + '" alt="' + (photo.alt || '') + '" style="width:100px; height:75px; object-fit:cover; border-radius:4px;" data-url="' + photo.src + '">';
+    photosHtml += '<img src="' + photo.src + '" alt="' + (photo.alt || '') + '" style="width:100px; height:75px; object-fit:cover; border-radius:4px;" data-url="' + photo.src + '" data-alt="' + (photo.alt || '') + '">';
   });
   div.innerHTML = '<div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem;"><input type="text" value="' + (categoryName || '') + '" placeholder="Category name" style="flex:1; font-weight:600;"><button class="btn-danger" onclick="this.parentElement.parentElement.remove()">Remove</button></div><div class="gallery-photos" style="display:flex; flex-wrap:wrap; gap:0.5rem;">' + photosHtml + '</div><button class="btn-secondary" onclick="addSinglePhoto(' + catIdx + ')">+ Add Photo</button><input type="file" id="photoInput' + catIdx + '" accept="image/*" style="display:none;" onchange="uploadSinglePhoto(this, ' + catIdx + ')">';
   container.appendChild(div);
@@ -336,16 +365,32 @@ async function uploadSinglePhoto(input, catIdx) {
   const categoryDiv = document.getElementById('galleryCat' + catIdx);
   if (!categoryDiv) return;
   const photosContainer = categoryDiv.querySelector('.gallery-photos');
+
   try {
     const imageUrl = await uploadAnyImage(file, 'galleries/' + Date.now() + '-' + file.name, '');
+
+    // Auto-generate alt text via Gemini Vision
+    let altText = '';
+    try {
+      const { base64, mimeType } = await fileToBase64(file);
+      const businessName = document.getElementById('listingName').value.trim() || 'Business';
+      const niche = window._dirNiche || '';
+      const genFn = functions.httpsCallable('generatePhotoAltText');
+      const altResult = await genFn({ imageBase64: base64, mimeType: mimeType, businessName: businessName, niche: niche });
+      altText = altResult.data.altText || '';
+    } catch (altError) {
+      console.error('Gallery alt text generation failed:', altError);
+    }
+
     const img = document.createElement('img');
     img.src = imageUrl;
-    img.alt = '';
+    img.alt = altText;
     img.style.width = '100px';
     img.style.height = '75px';
     img.style.objectFit = 'cover';
     img.style.borderRadius = '4px';
     img.dataset.url = imageUrl;
+    img.dataset.alt = altText;
     photosContainer.appendChild(img);
   } catch (error) { console.error('Gallery photo upload failed:', error); }
   input.value = '';
@@ -359,7 +404,7 @@ function collectGalleryData() {
     const categoryName = categoryInput ? categoryInput.value.trim() : '';
     const photos = [];
     const photoImgs = div.querySelectorAll('.gallery-photos img');
-    photoImgs.forEach(img => { photos.push({ src: img.dataset.url || img.src, alt: img.alt || '' }); });
+    photoImgs.forEach(img => { photos.push({ src: img.dataset.url || img.src, alt: img.dataset.alt || img.alt || '' }); });
     if (categoryName && photos.length > 0) categories.push({ category: categoryName, photos: photos });
   });
   return categories;

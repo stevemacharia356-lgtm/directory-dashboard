@@ -36,6 +36,23 @@ function compressImage(file, maxWidth, quality) {
   });
 }
 
+// Convert file to base64 (for Gemini Vision alt text)
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const result = e.target.result;
+      const commaIndex = result.indexOf(',');
+      resolve({
+        base64: result.substring(commaIndex + 1),
+        mimeType: file.type || 'image/jpeg'
+      });
+    };
+    reader.onerror = function() { reject(new Error('File read failed')); };
+    reader.readAsDataURL(file);
+  });
+}
+
 // Simple direct image upload with compression
 function uploadImage(file, storagePath) {
   return new Promise((resolve, reject) => {
