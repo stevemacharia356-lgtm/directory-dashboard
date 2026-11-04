@@ -1,53 +1,3 @@
-// Niche field configurations
-const NICHE_FIELDS = {
-  guesthouse: [
-    { fieldName: 'rooms', label: 'Number of Rooms', inputType: 'number', required: true, nicheSpecificKey: 'rooms' },
-    { fieldName: 'checkIn', label: 'Check-in Time', inputType: 'text', required: true, nicheSpecificKey: 'checkIn', placeholder: '12:00 PM' },
-    { fieldName: 'checkOut', label: 'Check-out Time', inputType: 'text', required: true, nicheSpecificKey: 'checkOut', placeholder: '10:00 AM' },
-    { fieldName: 'amenities', label: 'Amenities', inputType: 'checkbox-group', required: false, nicheSpecificKey: 'amenities',
-      options: ['WiFi', 'Hot Water', 'Secure Parking', 'Mosquito Nets', 'Breakfast Included', 'Room Service', 'Laundry', 'Generator Backup'] }
-  ],
-  hotel: [
-    { fieldName: 'rooms', label: 'Number of Rooms', inputType: 'number', required: true, nicheSpecificKey: 'rooms' },
-    { fieldName: 'starRating', label: 'Star Rating (1-5)', inputType: 'number', required: true, nicheSpecificKey: 'starRating' },
-    { fieldName: 'checkIn', label: 'Check-in Time', inputType: 'text', required: true, nicheSpecificKey: 'checkIn', placeholder: '12:00 PM' },
-    { fieldName: 'checkOut', label: 'Check-out Time', inputType: 'text', required: true, nicheSpecificKey: 'checkOut', placeholder: '10:00 AM' },
-    { fieldName: 'amenities', label: 'Amenities', inputType: 'checkbox-group', required: false, nicheSpecificKey: 'amenities',
-      options: ['WiFi', 'Hot Water', 'Secure Parking', 'Restaurant', 'Bar', 'TV', 'Air Conditioning', 'Room Service', 'Airport Shuttle', 'Swimming Pool', 'Gym', 'Conference Room', 'Generator Backup'] }
-  ],
-  apartment: [
-    { fieldName: 'apartmentType', label: 'Apartment Type', inputType: 'dropdown', required: true, nicheSpecificKey: 'apartmentType',
-      options: ['Bedsitter', 'One Bedroom', 'Two Bedroom', 'Three Bedroom', 'Studio'] },
-    { fieldName: 'monthlyRent', label: 'Monthly Rent (KSh)', inputType: 'number', required: true, nicheSpecificKey: 'monthlyRent' },
-    { fieldName: 'deposit', label: 'Deposit (KSh)', inputType: 'number', required: true, nicheSpecificKey: 'deposit' },
-    { fieldName: 'furnished', label: 'Furnished', inputType: 'toggle', required: false, nicheSpecificKey: 'furnished' },
-    { fieldName: 'unitsAvailable', label: 'Units Available', inputType: 'number', required: true, nicheSpecificKey: 'unitsAvailable' },
-    { fieldName: 'amenities', label: 'Amenities', inputType: 'checkbox-group', required: false, nicheSpecificKey: 'amenities',
-      options: ['WiFi', 'Water Included', 'Electricity Included', 'Secure Parking', 'Security Guard', 'CCTV', 'Balcony', 'Kitchen', 'Laundry Area', 'Gated Compound'] }
-  ],
-  school: [
-    { fieldName: 'schoolType', label: 'School Type', inputType: 'dropdown', required: true, nicheSpecificKey: 'schoolType',
-      options: ['Primary', 'Secondary', 'Combined Primary/Secondary', 'College', 'Vocational'] },
-    { fieldName: 'curriculum', label: 'Curriculum', inputType: 'text', required: true, nicheSpecificKey: 'curriculum', placeholder: '8-4-4, CBC, IGCSE' },
-    { fieldName: 'studentCount', label: 'Number of Students', inputType: 'number', required: true, nicheSpecificKey: 'studentCount' },
-    { fieldName: 'feesPerTerm', label: 'Fees per Term (KSh)', inputType: 'number', required: true, nicheSpecificKey: 'feesPerTerm' },
-    { fieldName: 'boarding', label: 'Boarding Available', inputType: 'toggle', required: false, nicheSpecificKey: 'boarding' },
-    { fieldName: 'daySchool', label: 'Day School Available', inputType: 'toggle', required: false, nicheSpecificKey: 'daySchool' },
-    { fieldName: 'facilities', label: 'Facilities', inputType: 'checkbox-group', required: false, nicheSpecificKey: 'facilities',
-      options: ['Library', 'Computer Lab', 'Science Lab', 'Sports Field', 'Swimming Pool', 'School Bus', 'Chapel/Mosque', 'Dining Hall'] }
-  ],
-  health: [
-    { fieldName: 'facilityType', label: 'Facility Type', inputType: 'dropdown', required: true, nicheSpecificKey: 'facilityType',
-      options: ['Hospital', 'Clinic', 'Dispensary', 'Health Centre', 'Maternity Home'] },
-    { fieldName: 'services', label: 'Services Offered', inputType: 'checkbox-group', required: false, nicheSpecificKey: 'services',
-      options: ['General Consultation', 'Maternity', 'Surgery', 'Laboratory', 'Pharmacy', 'Dental', 'Eye Care', 'Pediatrics', 'X-Ray', 'Ambulance', 'Inpatient', 'Outpatient'] },
-    { fieldName: 'doctorCount', label: 'Number of Doctors', inputType: 'number', required: true, nicheSpecificKey: 'doctorCount' },
-    { fieldName: 'visitingHours', label: 'Visiting Hours', inputType: 'text', required: true, nicheSpecificKey: 'visitingHours', placeholder: '7:00 AM - 6:00 PM' },
-    { fieldName: 'emergency', label: 'Emergency Services', inputType: 'toggle', required: false, nicheSpecificKey: 'emergency' },
-    { fieldName: 'insuranceAccepted', label: 'Insurance Accepted', inputType: 'text', required: true, nicheSpecificKey: 'insuranceAccepted', placeholder: 'NHIF, AAR, Jubilee' }
-  ]
-};
-
 // ============================================
 // DYNAMIC NICHE FIELDS — CACHE + PERSISTENCE
 // ============================================
@@ -140,33 +90,31 @@ function formatLabel(str) {
 async function renderNicheForm(nicheSlug, containerElement, existingData) {
   containerElement.innerHTML = '';
 
-  let fields = NICHE_FIELDS[nicheSlug];
+  // FORCE GEMINI FOR ALL NICHES
+  let fields = null;
 
-  if (!fields) {
-    // Custom niche — try Firestore cache first, then Gemini
-    containerElement.innerHTML = '<p style="color:#666;">Loading fields for ' + nicheSlug + '...</p>';
-    try {
-      if (dynamicFieldsCache[nicheSlug]) {
-        fields = dynamicFieldsCache[nicheSlug];
+  containerElement.innerHTML = '<p style="color:#666;">Loading fields for ' + nicheSlug + '...</p>';
+  try {
+    if (dynamicFieldsCache[nicheSlug]) {
+      fields = dynamicFieldsCache[nicheSlug];
+    } else {
+      const savedFields = await loadNicheFieldsFromFirestore(nicheSlug);
+      if (savedFields) {
+        fields = savedFields;
+        dynamicFieldsCache[nicheSlug] = fields;
       } else {
-        const savedFields = await loadNicheFieldsFromFirestore(nicheSlug);
-        if (savedFields) {
-          fields = savedFields;
-          dynamicFieldsCache[nicheSlug] = fields;
-        } else {
-          // Fetch BOTH fields and layout from Gemini
-          const result = await fetchNicheFieldsFromGemini(nicheSlug);
-          fields = result.fields;
-          dynamicFieldsCache[nicheSlug] = fields;
-          // Save fields AND layout to Firestore
-          await saveNicheFieldsToFirestore(nicheSlug, fields, result.layout);
-        }
+        // Fetch BOTH fields and layout from Gemini
+        const result = await fetchNicheFieldsFromGemini(nicheSlug);
+        fields = result.fields;
+        dynamicFieldsCache[nicheSlug] = fields;
+        // Save fields AND layout to Firestore
+        await saveNicheFieldsToFirestore(nicheSlug, fields, result.layout);
       }
-    } catch (error) {
-      console.error('Failed to fetch niche fields:', error);
-      containerElement.innerHTML = '<div class="form-group"><label>Services / Products</label><input type="text" placeholder="Enter services comma separated"></div>';
-      fields = [{ fieldName: 'services', label: 'Services / Products', inputType: 'text', required: false, nicheSpecificKey: 'services' }];
     }
+  } catch (error) {
+    console.error('Failed to fetch niche fields:', error);
+    containerElement.innerHTML = '<div class="form-group"><label>Services / Products</label><input type="text" placeholder="Enter services comma separated"></div>';
+    fields = [{ fieldName: 'services', label: 'Services / Products', inputType: 'text', required: false, nicheSpecificKey: 'services' }];
   }
 
   // FILTER: Remove any Price-related fields AND Yes/No toggles
