@@ -125,6 +125,15 @@ async function fetchNicheFieldsFromGemini(nicheName) {
 }
 
 // ============================================
+// HELPER: CLEAN LABEL (Fix camelCase)
+// ============================================
+function formatLabel(str) {
+  if (!str) return '';
+  const result = str.replace(/([A-Z])/g, ' $1');
+  return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+// ============================================
 // MAIN — RENDER NICHE FORM
 // ============================================
 
@@ -160,12 +169,19 @@ async function renderNicheForm(nicheSlug, containerElement, existingData) {
     }
   }
 
-  // FILTER: Remove any Price-related fields
+  // FILTER: Remove any Price-related fields AND Yes/No toggles
   const excludedKeywords = ['price', 'cost', 'rate', 'fee', 'pricing'];
   fields = fields.filter(field => {
     const name = (field.fieldName || '').toLowerCase();
     const label = (field.label || '').toLowerCase();
-    return !excludedKeywords.some(kw => name.includes(kw) || label.includes(kw));
+    
+    // Strip price/cost keywords
+    if (excludedKeywords.some(kw => name.includes(kw) || label.includes(kw))) return false;
+    
+    // Strip Yes/No toggles (per Strict Rules V1.8)
+    if (field.inputType === 'toggle') return false;
+
+    return true;
   });
 
   containerElement.innerHTML = '';
@@ -175,7 +191,10 @@ async function renderNicheForm(nicheSlug, containerElement, existingData) {
     formGroup.className = 'form-group';
 
     const label = document.createElement('label');
-    label.textContent = field.label + (field.required ? ' *' : '');
+    
+    // Use formatted label to fix camelCase if label is missing
+    const displayLabel = field.label || formatLabel(field.fieldName);
+    label.textContent = displayLabel + (field.required ? ' *' : '');
     formGroup.appendChild(label);
 
     if (field.inputType === 'text' || field.inputType === 'number') {
@@ -279,26 +298,6 @@ async function renderNicheForm(nicheSlug, containerElement, existingData) {
       formGroup.appendChild(customRow);
     }
 
-    if (field.inputType === 'toggle') {
-      const toggleLabel = document.createElement('label');
-      toggleLabel.style.display = 'flex';
-      toggleLabel.style.alignItems = 'center';
-      toggleLabel.style.gap = '0.5rem';
-      toggleLabel.style.cursor = 'pointer';
-
-      const toggle = document.createElement('input');
-      toggle.type = 'checkbox';
-      toggle.name = field.fieldName;
-      toggle.style.width = 'auto';
-      if (existingData && existingData[field.nicheSpecificKey] === true) {
-        toggle.checked = true;
-      }
-
-      toggleLabel.appendChild(toggle);
-      toggleLabel.appendChild(document.createTextNode('Yes'));
-      formGroup.appendChild(toggleLabel);
-    }
-
     containerElement.appendChild(formGroup);
   });
 
@@ -309,9 +308,6 @@ async function renderNicheForm(nicheSlug, containerElement, existingData) {
         if (field.inputType === 'checkbox-group') {
           const checked = containerElement.querySelectorAll(`input[name="${field.fieldName}"]:checked`);
           values[field.nicheSpecificKey] = Array.from(checked).map(cb => cb.value);
-        } else if (field.inputType === 'toggle') {
-          const toggleEl = containerElement.querySelector(`input[name="${field.fieldName}"]`);
-          values[field.nicheSpecificKey] = toggleEl ? toggleEl.checked : false;
         } else {
           const inputEl = containerElement.querySelector(`input[name="${field.fieldName}"], select[name="${field.fieldName}"]`);
           if (inputEl) {
