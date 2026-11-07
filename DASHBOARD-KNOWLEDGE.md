@@ -1,4 +1,4 @@
-# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V1.9 (COMPLETE)
+# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V2.0 (COMPLETE)
 
 ## PROJECT OVERVIEW
 Vanilla JS mobile-friendly dashboard for managing directory listings and business pages. Connects to same Firestore and Storage as the engine. Deployed to admin-dashboard-dc821.web.app. Public site at kedirectory.co.ke.
@@ -16,7 +16,7 @@ admin-dashboard-dc821.web.app
 
 ## DYNAMIC NICHES (UNLIMITED) & FIRESTORE PERSISTENCE
 Niche type is a text input. Type ANY business type.
-Gemini generates the correct form fields automatically via `getNicheFields`.
+AI generates the correct form fields automatically via `getNicheFields`.
 **Custom Niche Persistence:** The field definitions are saved to Firestore (`nicheFields/{nicheSlug}`) so they NEVER regenerate when you edit the listing later.
 
 ## AI LAYOUT ENGINE (V1.8)
@@ -31,17 +31,25 @@ Both are saved to Firestore (`nicheFields/{nicheSlug}`).
 - Once saved, it never regenerates, so the layout is permanent.
 - **Retry Logic:** Both functions have automatic retries if Gemini is overloaded (503 error).
 
+## 🚀 AI FALLBACK SYSTEM (V2.0) — GEMINI + DEEPSEEK
+To ensure a 100% smooth experience with zero downtime, all AI Cloud Functions now use a **Fallback System**.
+- **Primary AI:** Gemini (Handles 99% of requests).
+- **Backup AI:** DeepSeek (Takes over instantly if Gemini fails).
+- **Mechanism:** The `functions/index.js` file includes a helper function `callDeepSeek()`. Every AI function attempts Gemini first (with up to 3 retries for 503 errors). If Gemini completely fails or times out, the function catches the error and automatically sends the exact same prompt to DeepSeek.
+- **Configuration:** The DeepSeek API key is securely stored using `firebase functions:config:set deepseek.key="sk-..."`.
+- **Vision Support:** DeepSeek handles the `generatePhotoAltText` fallback using its vision model (`deepseek-flash`).
+
 ## AI FAQ GENERATOR (V1.9)
 - **Cloud Function:** `generateFAQs`.
 - **Where:** Button on the listing form in `js/listings.js`.
 - **Trigger:** Manual. Clicking the button generates 3 Q&As for the current listing.
-- **Inputs read by Gemini:** listing name, niche, location, summary, `nicheSpecific` fields, and the generated blog body (if any).
+- **Inputs read by AI:** listing name, niche, location, summary, `nicheSpecific` fields, and the generated blog body (if any).
 - **Output:** Exactly 3 FAQs — `[{question, answer}]`.
 - **Persistence:** FAQs are stored on the listing document when the listing is saved. Generating FAQs alone does not persist until Save Listing is clicked.
 - **Why it's separate from `askDirectoryAssistant`:** `askDirectoryAssistant` answers visitor questions on the public site; `generateFAQs` pre-generates FAQ content for the listing page itself.
 
 ## AI PHOTO ALT TEXT (V1.9)
-- **Cloud Function:** `generatePhotoAltText` (Gemini Vision — receives `imageBase64` + `mimeType`).
+- **Cloud Function:** `generatePhotoAltText` (Gemini Vision + DeepSeek Fallback — receives `imageBase64` + `mimeType`).
 - **Three modes:**
   - **Hero image (button):** Manual trigger in `js/directories.js`.
   - **Thumbnail (button):** Manual trigger in `js/directories.js`.
@@ -50,7 +58,7 @@ Both are saved to Firestore (`nicheFields/{nicheSlug}`).
 - **Output:** A single ≤15-word SEO/accessibility-friendly alt text string describing the visible image content.
 - **Constraint:** The model is told not to invent features, prices, or claims not visible in the image.
 
-## STRICT GEMINI RULES (V1.8)
+## STRICT AI RULES (V2.0)
 - **Niche Fields:** No location fields, no Yes/No toggles, no "Other" options, no Price fields.
 - **Safety Filter:** `js/form-engine.js` strips out any field containing "price", "cost", "rate", or "fee".
 - **Location Description:** Strict MAX 100 words, 2 paragraphs.
@@ -62,7 +70,7 @@ Both are saved to Firestore (`nicheFields/{nicheSlug}`).
 
 ## AI ASSISTANT (V1.7)
 - **Cloud Function:** `askDirectoryAssistant`.
-- **RAG System:** Gemini acts as a Retrieval-Augmented Generation assistant.
+- **RAG System:** AI acts as a Retrieval-Augmented Generation assistant.
 - **Listing Mode:** Reads ONLY the specific listing's data. If the answer isn't there, it politely tells the user to call the business's phone number.
 - **Directory Mode:** Reads ALL listings in the directory AND related directories. Allows users to ask comparison questions (e.g., "Who has WiFi?", "Which is cheapest?", "Do you have a hospital in Hindi?").
 
@@ -70,7 +78,7 @@ Both are saved to Firestore (`nicheFields/{nicheSlug}`).
 Budget, Mid-range, Premium, Luxury — dropdown. Exact numeric price optional.
 
 ## BUSINESS PAGES (V1.5 COMPLETE)
-Business pages have all features: verified toggle, photo gallery with categories, target keyword, standout feature, owner story, Gemini blog generator, FAQs, opening hours, services.
+Business pages have all features: verified toggle, photo gallery with categories, target keyword, standout feature, owner story, AI blog generator, FAQs, opening hours, services.
 
 ## REQUIRED FIELDS (MINIMAL)
 - Directory: Niche and location only
@@ -92,13 +100,13 @@ directory-dashboard/
 ├── js/firebase-config.js — Firebase initialization
 ├── js/auth.js — Auth state
 ├── js/utils.js — Slug generation, validation
-├── js/form-engine.js — NICHE_FIELDS + calls both Gemini functions + saves fields + layout
+├── js/form-engine.js — NICHE_FIELDS + calls both AI functions + saves fields + layout
 ├── js/image-upload.js — Direct upload with compression; auto alt-text helper (V1.9)
 ├── js/directories.js — Directory management; hero + thumbnail alt-text buttons (V1.9)
 ├── js/listings.js — Listing form with summary/blog generators; AI FAQ button + listing-level alt-text buttons (V1.9)
 ├── js/business.js — Business pages with gallery
 ├── js/publish.js — Publish button
-├── functions/index.js — 10 Cloud Functions
+├── functions/index.js — 10 Cloud Functions (Gemini primary, DeepSeek fallback)
 ├── firebase.json — Hosting + Firestore rules config
 ├── firestore.rules — Security rules (includes nicheFields)
 └── KNOWLEDGE.md — This file
@@ -106,14 +114,14 @@ directory-dashboard/
 ## CLOUD FUNCTIONS (10 TOTAL)
 1. processImage — Storage trigger, converts images to WebP, updates hero/thumbnail status in Firestore
 2. triggerPublish — GitHub repository_dispatch proxy
-3. getNicheFields — Gemini generates clean fields (no location, no price, no toggles)
+3. getNicheFields — AI generates clean fields (no location, no price, no toggles)
 4. generateLocationDescription — Generates max 100 words / 2 paragraphs
 5. generateBusinessSummary — Generates summaries with EEAT rules
 6. generateBlog — Generates blogs with niche tone rules
 7. askDirectoryAssistant — RAG AI assistant for the public website. Reads listing or directory data to answer visitor questions.
 8. generateNicheLayout — Generates `directoryCard` and `listingPage` JSON layouts based on UX rules.
 9. **generateFAQs (V1.9)** — Generates exactly 3 Q&As per listing from summary + nicheSpecific + blog. JSON output.
-10. **generatePhotoAltText (V1.9)** — Gemini Vision. Generates ≤15-word SEO alt text from an image (base64 + mimeType).
+10. **generatePhotoAltText (V1.9)** — AI Vision. Generates ≤15-word SEO alt text from an image (base64 + mimeType).
 
 ## BACKFILLING EXISTING NICHES
 If a niche was created before V1.8, it will not have a `layout`. You can run a one-time script in the browser console to generate layouts for all existing niches. (See the `backfillLayouts` script).
@@ -122,6 +130,7 @@ If a niche was created before V1.8, it will not have a `layout`. You can run a o
 - Firestore rules: public read, write only authenticated admin
 - Collections: directories, businesses, nicheFields
 - Firebase Auth: single admin
+- **AI Keys:** Stored securely in Firebase Runtime Config (Gemini + DeepSeek). 
 
 ## WORKFLOW
 1. Login at admin-dashboard-dc821.web.app
