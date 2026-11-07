@@ -410,54 +410,34 @@ RULES:
 7. Never mention that you are an AI or that you are using a language model.`;
   } 
   else if (mode === 'homepage') {
-    // Fetch all published directories to provide global context
+    // Fetch all published directories from Firestore
     const dirsSnapshot = await admin.firestore().collection('directories').get();
-    const allDirs = [];
+    let contextLines = [];
     
     dirsSnapshot.forEach(doc => {
       const d = doc.data();
       if (d.published) {
-        allDirs.push({
-          id: doc.id,
-          niche: (d.nicheDisplay || '').toLowerCase(),
-          location: (d.locationDisplay || '').toLowerCase(),
-          listingsCount: (d.listings || []).length,
-          url: `/${doc.id}/`
-        });
+        const count = (d.listings || []).length;
+        contextLines.push(`- Category: ${d.nicheDisplay} | Location: ${d.locationDisplay} | ${count} listings | URL: /${doc.id}/`);
       }
     });
 
-    // Simple semantic matching (checking if the user's question contains the location or niche)
-    const lowerQuestion = question.toLowerCase();
-    
-    let matches = allDirs.filter(d => 
-      lowerQuestion.includes(d.niche) || 
-      lowerQuestion.includes(d.location) ||
-      d.niche.includes(lowerQuestion) || 
-      d.location.includes(lowerQuestion)
-    );
+    const allDirsText = contextLines.join('\n');
 
-    // Build context strictly from matches
-    let matchedContext = '';
-    if (matches.length > 0) {
-      matchedContext = matches.map(m => `- We have "${m.niche} in ${m.location}" with ${m.listingsCount} listings. URL: ${m.url}`).join('\n');
-    } else {
-      matchedContext = 'No direct keyword matches found in the database.';
-    }
+    prompt = `You are the Kedirectory Global AI Assistant.
+Below is the EXACT list of directories we currently have in our database:
 
-    prompt = `You are the Global Database Assistant for Kedirectory.co.ke. 
-The user is searching the whole site. I have queried the Firestore database based on their keywords, and here are the results:
+${allDirsText}
 
-DATABASE SEARCH RESULTS:
-${matchedContext}
+USER QUESTION: "${question}"
 
-USER QUESTION: ${question}
-
-RULES:
-1. If the DATABASE SEARCH RESULTS show a match (even if the wording is slightly different like "Guest House" vs "Guesthouses"), you MUST give the user the exact link. Example: "Yes, we have Guesthouses in Hindi! You can view them here: /guesthouses-hindi/"
-2. If the results say "No direct keyword matches found", tell the user: "I couldn't find an exact match for that in our database right now. We are adding new locations daily."
-3. Do NOT invent links. Only use the URLs provided in the DATABASE SEARCH RESULTS.
-4. Keep your answer to 1-2 sentences. Be extremely direct and helpful.`;
+CRITICAL RULES:
+1. Read the user's question carefully. They might use slightly different words (e.g., "guest house" instead of "Guesthouses", or "hospitals" instead of "Health Facilities").
+2. Find the BEST matching directory from the list above based on the category and location they asked for.
+3. If you find a match, you MUST give them the exact link. Example: "Yes, we have a page for Guesthouses in Hindi! You can view it here: /guesthouses-hindi/"
+4. If the user asks for a specific business name (e.g., "Mama Maendeleo"), look at the categories and locations to figure out where it would be. (e.g., "It might be listed under Guesthouses in Lamu").
+5. If there is absolutely NO match for the category or location they asked for, tell them we don't have it yet.
+6. Keep your answer to 1-2 sentences. Be extremely direct and helpful. Do not use markdown formatting for the link, just provide the raw URL.`;
   }
   else {
     throw new functions.https.HttpsError('invalid-argument', 'Invalid mode or missing data.');
