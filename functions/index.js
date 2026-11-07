@@ -19,7 +19,6 @@ async function callDeepSeek(prompt, isJson = false, base64Image = null, mimeType
   let messages = [];
   
   if (base64Image && mimeType) {
-    // DeepSeek Vision Format
     messages = [
       {
         role: "user",
@@ -30,7 +29,6 @@ async function callDeepSeek(prompt, isJson = false, base64Image = null, mimeType
       }
     ];
   } else {
-    // DeepSeek Text Format
     messages = [
       { role: "system", content: "You are a helpful assistant." },
       { role: "user", content: prompt }
@@ -212,7 +210,6 @@ exports.getNicheFields = functions.https.onCall(async (data, context) => {
 
   let text = '';
   try {
-    // Try Gemini
     let response;
     let retries = 3;
     while (retries > 0) {
@@ -233,10 +230,8 @@ exports.getNicheFields = functions.https.onCall(async (data, context) => {
     if (!response || !response.ok) throw new Error('Gemini failed');
     const result = await response.json();
     text = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
   } catch (geminiError) {
     console.warn('Gemini failed, falling back to DeepSeek:', geminiError.message);
-    // Fallback to DeepSeek
     text = await callDeepSeek(prompt, true);
   }
 
@@ -346,6 +341,9 @@ exports.generateBlog = functions.https.onCall(async (data, context) => {
   }
 });
 
+// ============================================
+// ASK DIRECTORY ASSISTANT (INCLUDING HOMEPAGE MODE)
+// ============================================
 exports.askDirectoryAssistant = functions.https.onCall(async (data, context) => {
   const apiKey = functions.config().gemini.key;
   const { question, mode, listingData, directoryData, relatedDirectories } = data;
@@ -411,6 +409,34 @@ RULES:
 6. Keep your answer concise (2-4 sentences maximum). Be friendly and professional.
 7. Never mention that you are an AI or that you are using a language model.`;
   } 
+  else if (mode === 'homepage') {
+    // Fetch all directories to provide global context
+    const dirsSnapshot = await admin.firestore().collection('directories').get();
+    let allContext = [];
+    
+    dirsSnapshot.forEach(doc => {
+      const d = doc.data();
+      if (d.published) {
+        const listingsCount = (d.listings || []).length;
+        allContext.push(`- ${d.nicheDisplay} in ${d.locationDisplay} (${listingsCount} listings) - View here: /${doc.id}/`);
+      }
+    });
+
+    prompt = `You are the Global Assistant for Kedirectory.co.ke, a Kenyan business directory.
+Your job is to help users find the right directory category or location based on their request.
+
+AVAILABLE DIRECTORIES (The current source of truth):
+${allContext.join('\n')}
+
+VISITOR QUESTION: ${question}
+
+RULES:
+1. Answer the user's question by pointing them to the most relevant directory from the list above.
+2. Be conversational, friendly, and concise (2-3 sentences).
+3. If they ask for a specific business (e.g., "Where is Mama Maendeleo?"), try to match it to the directory category and location listed above.
+4. If the user asks for something we do not have in the list above, politely tell them we don't have that category yet.
+5. Never mention that you are an AI. Just act like a helpful local guide.`;
+  }
   else {
     throw new functions.https.HttpsError('invalid-argument', 'Invalid mode or missing data.');
   }
