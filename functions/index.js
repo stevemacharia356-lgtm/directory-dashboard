@@ -410,32 +410,54 @@ RULES:
 7. Never mention that you are an AI or that you are using a language model.`;
   } 
   else if (mode === 'homepage') {
-    // Fetch all directories to provide global context
+    // Fetch all published directories to provide global context
     const dirsSnapshot = await admin.firestore().collection('directories').get();
-    let allContext = [];
+    const allDirs = [];
     
     dirsSnapshot.forEach(doc => {
       const d = doc.data();
       if (d.published) {
-        const listingsCount = (d.listings || []).length;
-        allContext.push(`- ${d.nicheDisplay} in ${d.locationDisplay} (${listingsCount} listings) - View here: /${doc.id}/`);
+        allDirs.push({
+          id: doc.id,
+          niche: (d.nicheDisplay || '').toLowerCase(),
+          location: (d.locationDisplay || '').toLowerCase(),
+          listingsCount: (d.listings || []).length,
+          url: `/${doc.id}/`
+        });
       }
     });
 
-    prompt = `You are the Global Assistant for Kedirectory.co.ke, a Kenyan business directory.
-Your job is to help users find the right directory category or location based on their request.
+    // Simple semantic matching (checking if the user's question contains the location or niche)
+    const lowerQuestion = question.toLowerCase();
+    
+    let matches = allDirs.filter(d => 
+      lowerQuestion.includes(d.niche) || 
+      lowerQuestion.includes(d.location) ||
+      d.niche.includes(lowerQuestion) || 
+      d.location.includes(lowerQuestion)
+    );
 
-AVAILABLE DIRECTORIES (The current source of truth):
-${allContext.join('\n')}
+    // Build context strictly from matches
+    let matchedContext = '';
+    if (matches.length > 0) {
+      matchedContext = matches.map(m => `- We have "${m.niche} in ${m.location}" with ${m.listingsCount} listings. URL: ${m.url}`).join('\n');
+    } else {
+      matchedContext = 'No direct keyword matches found in the database.';
+    }
 
-VISITOR QUESTION: ${question}
+    prompt = `You are the Global Database Assistant for Kedirectory.co.ke. 
+The user is searching the whole site. I have queried the Firestore database based on their keywords, and here are the results:
+
+DATABASE SEARCH RESULTS:
+${matchedContext}
+
+USER QUESTION: ${question}
 
 RULES:
-1. Answer the user's question by pointing them to the most relevant directory from the list above.
-2. Be conversational, friendly, and concise (2-3 sentences).
-3. If they ask for a specific business (e.g., "Where is Mama Maendeleo?"), try to match it to the directory category and location listed above.
-4. If the user asks for something we do not have in the list above, politely tell them we don't have that category yet.
-5. Never mention that you are an AI. Just act like a helpful local guide.`;
+1. If the DATABASE SEARCH RESULTS show a match (even if the wording is slightly different like "Guest House" vs "Guesthouses"), you MUST give the user the exact link. Example: "Yes, we have Guesthouses in Hindi! You can view them here: /guesthouses-hindi/"
+2. If the results say "No direct keyword matches found", tell the user: "I couldn't find an exact match for that in our database right now. We are adding new locations daily."
+3. Do NOT invent links. Only use the URLs provided in the DATABASE SEARCH RESULTS.
+4. Keep your answer to 1-2 sentences. Be extremely direct and helpful.`;
   }
   else {
     throw new functions.https.HttpsError('invalid-argument', 'Invalid mode or missing data.');
