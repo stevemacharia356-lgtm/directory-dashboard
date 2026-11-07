@@ -1,4 +1,4 @@
-# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V2.0 (COMPLETE)
+# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V2.1 (COMPLETE)
 
 ## PROJECT OVERVIEW
 Vanilla JS mobile-friendly dashboard for managing directory listings and business pages. Connects to same Firestore and Storage as the engine. Deployed to admin-dashboard-dc821.web.app. Public site at kedirectory.co.ke.
@@ -58,7 +58,7 @@ To ensure a 100% smooth experience with zero downtime, all AI Cloud Functions no
 - **Output:** A single ≤15-word SEO/accessibility-friendly alt text string describing the visible image content.
 - **Constraint:** The model is told not to invent features, prices, or claims not visible in the image.
 
-## STRICT AI RULES (V2.0)
+## STRICT AI RULES (V2.1)
 - **Niche Fields:** No location fields, no Yes/No toggles, no "Other" options, no Price fields.
 - **Safety Filter:** `js/form-engine.js` strips out any field containing "price", "cost", "rate", or "fee".
 - **Location Description:** Strict MAX 100 words, 2 paragraphs.
@@ -68,11 +68,12 @@ To ensure a 100% smooth experience with zero downtime, all AI Cloud Functions no
 - **FAQ Generator (V1.9):** Exactly 3 Q&As. Must use only provided context. Must not invent facts. Output JSON only.
 - **Alt Text Generator (V1.9):** Max 15 words. Describe only what is visible. Output the alt text string only.
 
-## AI ASSISTANT (V1.7)
+## AI ASSISTANT (V2.1)
 - **Cloud Function:** `askDirectoryAssistant`.
 - **RAG System:** AI acts as a Retrieval-Augmented Generation assistant.
 - **Listing Mode:** Reads ONLY the specific listing's data. If the answer isn't there, it politely tells the user to call the business's phone number.
 - **Directory Mode:** Reads ALL listings in the directory AND related directories. Allows users to ask comparison questions (e.g., "Who has WiFi?", "Which is cheapest?", "Do you have a hospital in Hindi?").
+- **Homepage Mode (V2.1):** Reads ALL published directories to match global search intent. Takes natural language (e.g., "guest house") and matches it to database categories (e.g., "Guesthouses") to provide exact links.
 
 ## PRICE CATEGORIES
 Budget, Mid-range, Premium, Luxury — dropdown. Exact numeric price optional.
@@ -118,7 +119,7 @@ directory-dashboard/
 4. generateLocationDescription — Generates max 100 words / 2 paragraphs
 5. generateBusinessSummary — Generates summaries with EEAT rules
 6. generateBlog — Generates blogs with niche tone rules
-7. askDirectoryAssistant — RAG AI assistant for the public website. Reads listing or directory data to answer visitor questions.
+7. askDirectoryAssistant — RAG AI assistant for the public website. Reads listing, directory, or homepage data to answer visitor questions.
 8. generateNicheLayout — Generates `directoryCard` and `listingPage` JSON layouts based on UX rules.
 9. **generateFAQs (V1.9)** — Generates exactly 3 Q&As per listing from summary + nicheSpecific + blog. JSON output.
 10. **generatePhotoAltText (V1.9)** — AI Vision. Generates ≤15-word SEO alt text from an image (base64 + mimeType).
