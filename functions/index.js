@@ -416,9 +416,12 @@ RULES:
     
     dirsSnapshot.forEach(doc => {
       const d = doc.data();
-      if (d.published) {
+      // Strict fix: Check for status === 'published'
+      if (d.status === 'published') {
         const count = (d.listings || []).length;
-        contextLines.push(`- Category: ${d.nicheDisplay} | Location: ${d.locationDisplay} | ${count} listings | URL: /${doc.id}/`);
+        // Strict fix: Use the internal directory field, fallback to doc.id
+        const dirSlug = d.directory || doc.id; 
+        contextLines.push(`- Category: ${d.nicheDisplay} | Location: ${d.locationDisplay} | ${count} listings | URL: /${dirSlug}/`);
       }
     });
 
@@ -432,10 +435,11 @@ ${allDirsText}
 USER QUESTION: "${question}"
 
 CRITICAL RULES:
-1. Read the user's question carefully. They might use slightly different words (e.g., "guest house" instead of "Guesthouses", or "hospitals" instead of "Health Facilities").
+1. Read the user's question carefully. They might use slightly different words (e.g., "guest house" instead of "Guesthouses").
 2. Find the BEST matching directory from the list above based on the category and location they asked for.
-3. If you find a match, you MUST give them the exact link. Example: "Yes, we have a page for Guesthouses in Hindi! You can view it here: /guesthouses-hindi/"
-4. If the user asks for a specific business name (e.g., "Mama Maendeleo"), look at the categories and locations to figure out where it would be. (e.g., "It might be listed under Guesthouses in Lamu").
+3. If you find a match, you MUST give them the EXACT URL provided in the list above. Do NOT invent a URL.
+   - Example Output: "Yes, we have a page for Guesthouses in Hindi! You can view it here: /guesthouse-premium-hindi/"
+4. If the user asks for a specific business name, look at the categories and locations to figure out where it would be listed.
 5. If there is absolutely NO match for the category or location they asked for, tell them we don't have it yet.
 6. Keep your answer to 1-2 sentences. Be extremely direct and helpful. Do not use markdown formatting for the link, just provide the raw URL.`;
   }
