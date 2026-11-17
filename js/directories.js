@@ -80,6 +80,35 @@ async function generateLocationDesc() {
   }
 }
 
+// NEW FUNCTION FOR EDIT MODE
+async function generateLocationDescEdit() {
+  const btn = document.getElementById('btnGenLocDescEdit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  try {
+    const locationName = window._dirLocation || '';
+    const niche = window._dirNiche || '';
+    
+    // Try to find county/subcounty if they exist in the form, otherwise empty
+    const countyInput = document.getElementById('editCounty');
+    const subCountyInput = document.getElementById('editSubCounty');
+    const county = countyInput ? countyInput.value.trim() : '';
+    const subCounty = subCountyInput ? subCountyInput.value.trim() : '';
+
+    if (!locationName || !niche) {
+      if (btn) { btn.disabled = false; btn.textContent = '✨ Generate Location Description'; }
+      return;
+    }
+
+    const genFn = functions.httpsCallable('generateLocationDescription');
+    const result = await genFn({ locationName, county, subCounty, niche });
+    document.getElementById('editDescription').value = result.data.description || '';
+    if (btn) { btn.textContent = '✓ Generated'; setTimeout(() => { btn.disabled = false; btn.textContent = '✨ Generate Location Description'; }, 2000); }
+  } catch (error) {
+    console.error('Location description generation failed:', error);
+    if (btn) { btn.disabled = false; btn.textContent = '✗ Failed. Try Again'; setTimeout(() => { btn.textContent = '✨ Generate Location Description'; }, 2000); }
+  }
+}
+
 async function generateHeroAlt() {
   const btn = document.getElementById('btnGenHeroAlt');
   const isEdit = !!document.getElementById('editHeroAlt');
@@ -177,7 +206,9 @@ function editDirectory(slug) {
     let displayTitle = data.nicheDisplay + ' in ' + data.locationDisplay;
     if (data.categoryTag) displayTitle = data.categoryTag + ' ' + data.nicheDisplay + ' in ' + data.locationDisplay;
     const content = document.getElementById('content');
-    content.innerHTML = '<div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;"><button class="back-button-header" onclick="goBackView()" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.2rem;">←</button><h2>Edit: ' + displayTitle + '</h2></div><span class="status-badge status-' + (data.status === 'published' ? 'published' : 'draft') + '">' + data.status + '</span><div class="card" style="margin-top:1rem;"><div class="form-group"><label>Location Description</label><textarea id="editDescription">' + (data.locationDescription || '') + '</textarea></div><div class="form-group"><label>Hero Image</label><input type="file" id="editHeroFile" accept="image/*"><div id="heroPreview">' + (data.heroImage ? '<img src="' + data.heroImage + '" alt="' + (data.heroImageAlt || '') + '" class="image-preview">' : '') + '</div></div><div class="form-group"><label>Hero Alt Text</label><input type="text" id="editHeroAlt" value="' + (data.heroImageAlt || '') + '"><button class="btn-secondary" id="btnGenHeroAlt" onclick="generateHeroAlt()" style="width:auto; margin-top:0.5rem;">✨ Generate Alt Text</button></div><button class="btn-primary" id="btnUpdateDir" onclick="updateDirectory(\'' + slug + '\')">Update Directory</button>' + (data.status === 'draft' ? '<button class="btn-success" id="btnPubNow" onclick="changeDirectoryStatus(\'' + slug + '\', \'published\')">Publish Now</button>' : '<button class="btn-secondary" id="btnUnpub" onclick="changeDirectoryStatus(\'' + slug + '\', \'draft\')">Unpublish</button>') + '</div><h3 style="margin-top:1.5rem;">Listings (' + ((data.listings || []).length) + '/10)</h3><button class="btn-primary" onclick="showListingForm(\'' + slug + '\')" style="width:auto;">+ Add Listing</button><div id="listingsList" style="margin-top:1rem;">' + (data.listings || []).map((listing, idx) => '<div class="listing-item" onclick="showListingForm(\'' + slug + '\', \'' + listing.id + '\')"><img src="' + (listing.thumbnail || '') + '" alt="' + (listing.thumbnailAlt || '') + '"><div class="listing-item-info"><h3>' + listing.name + '</h3><p>' + (listing.priceCategory || 'No price') + ' | ' + (listing.phoneDisplay || '') + '</p></div><button class="btn-danger" onclick="event.stopPropagation(); deleteListing(\'' + slug + '\', \'' + listing.id + '\')">Delete</button></div>').join('') + '</div><h3 style="margin-top:1.5rem;">Global FAQs</h3><div id="globalFaqsContainer">' + (data.globalFaqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="faqQ' + idx + '"></div><div class="form-group"><textarea id="faqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('') + '</div><button class="btn-secondary" onclick="addGlobalFaqRow()">+ Add FAQ</button><button class="btn-primary" id="btnSaveFaqs" onclick="saveGlobalFaqs(\'' + slug + '\')" style="margin-top:1rem;">Save FAQs</button>';
+    
+    // ADDED THE "GENERATE LOCATION DESCRIPTION" BUTTON TO THE EDIT FORM
+    content.innerHTML = '<div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem;"><button class="back-button-header" onclick="goBackView()" style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; border:1px solid #ddd; background:white; cursor:pointer; font-size:1.2rem;">←</button><h2>Edit: ' + displayTitle + '</h2></div><span class="status-badge status-' + (data.status === 'published' ? 'published' : 'draft') + '">' + data.status + '</span><div class="card" style="margin-top:1rem;"><div class="form-group"><label>Location Description</label><textarea id="editDescription">' + (data.locationDescription || '') + '</textarea><button class="btn-secondary" id="btnGenLocDescEdit" onclick="generateLocationDescEdit()" style="width:auto; margin-top:0.5rem;">✨ Generate Location Description</button></div><div class="form-group"><label>Hero Image</label><input type="file" id="editHeroFile" accept="image/*"><div id="heroPreview">' + (data.heroImage ? '<img src="' + data.heroImage + '" alt="' + (data.heroImageAlt || '') + '" class="image-preview">' : '') + '</div></div><div class="form-group"><label>Hero Alt Text</label><input type="text" id="editHeroAlt" value="' + (data.heroImageAlt || '') + '"><button class="btn-secondary" id="btnGenHeroAlt" onclick="generateHeroAlt()" style="width:auto; margin-top:0.5rem;">✨ Generate Alt Text</button></div><button class="btn-primary" id="btnUpdateDir" onclick="updateDirectory(\'' + slug + '\')">Update Directory</button>' + (data.status === 'draft' ? '<button class="btn-success" id="btnPubNow" onclick="changeDirectoryStatus(\'' + slug + '\', \'published\')">Publish Now</button>' : '<button class="btn-secondary" id="btnUnpub" onclick="changeDirectoryStatus(\'' + slug + '\', \'draft\')">Unpublish</button>') + '</div><h3 style="margin-top:1.5rem;">Listings (' + ((data.listings || []).length) + '/10)</h3><button class="btn-primary" onclick="showListingForm(\'' + slug + '\')" style="width:auto;">+ Add Listing</button><div id="listingsList" style="margin-top:1rem;">' + (data.listings || []).map((listing, idx) => '<div class="listing-item" onclick="showListingForm(\'' + slug + '\', \'' + listing.id + '\')"><img src="' + (listing.thumbnail || '') + '" alt="' + (listing.thumbnailAlt || '') + '"><div class="listing-item-info"><h3>' + listing.name + '</h3><p>' + (listing.priceCategory || 'No price') + ' | ' + (listing.phoneDisplay || '') + '</p></div><button class="btn-danger" onclick="event.stopPropagation(); deleteListing(\'' + slug + '\', \'' + listing.id + '\')">Delete</button></div>').join('') + '</div><h3 style="margin-top:1.5rem;">Global FAQs</h3><div id="globalFaqsContainer">' + (data.globalFaqs || []).map((faq, idx) => '<div class="faq-row"><div class="form-group"><input value="' + faq.question + '" id="faqQ' + idx + '"></div><div class="form-group"><textarea id="faqA' + idx + '">' + faq.answer + '</textarea></div><button class="btn-danger" onclick="this.parentElement.remove()">X</button></div>').join('') + '</div><button class="btn-secondary" onclick="addGlobalFaqRow()">+ Add FAQ</button><button class="btn-primary" id="btnSaveFaqs" onclick="saveGlobalFaqs(\'' + slug + '\')" style="margin-top:1rem;">Save FAQs</button>';
 
     // Add to navigation history
     if (typeof navigateToView === 'function') {
