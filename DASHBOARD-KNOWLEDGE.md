@@ -1,4 +1,4 @@
-# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V2.1 (COMPLETE)
+# KNOWLEDGE.md — KEDIRECTORY DASHBOARD V2.2 (COMPLETE)
 
 ## PROJECT OVERVIEW
 Vanilla JS mobile-friendly dashboard for managing directory listings and business pages. Connects to same Firestore and Storage as the engine. Deployed to admin-dashboard-dc821.web.app. Public site at kedirectory.co.ke.
@@ -46,7 +46,6 @@ To ensure a 100% smooth experience with zero downtime, all AI Cloud Functions no
 - **Inputs read by AI:** listing name, niche, location, summary, `nicheSpecific` fields, and the generated blog body (if any).
 - **Output:** Exactly 3 FAQs — `[{question, answer}]`.
 - **Persistence:** FAQs are stored on the listing document when the listing is saved. Generating FAQs alone does not persist until Save Listing is clicked.
-- **Why it's separate from `askDirectoryAssistant`:** `askDirectoryAssistant` answers visitor questions on the public site; `generateFAQs` pre-generates FAQ content for the listing page itself.
 
 ## AI PHOTO ALT TEXT (V1.9)
 - **Cloud Function:** `generatePhotoAltText` (Gemini Vision + DeepSeek Fallback — receives `imageBase64` + `mimeType`).
@@ -56,7 +55,11 @@ To ensure a 100% smooth experience with zero downtime, all AI Cloud Functions no
   - **Gallery photos (auto):** Runs automatically on gallery upload; helper lives in `js/image-upload.js`.
 - **Also wired in `js/listings.js`** for listing-level hero/thumbnail alt text.
 - **Output:** A single ≤15-word SEO/accessibility-friendly alt text string describing the visible image content.
-- **Constraint:** The model is told not to invent features, prices, or claims not visible in the image.
+
+## DASHBOARD AI GENERATION (V2.2)
+- **Edit Mode Generation:** The "Generate Location Description" and "Generate Global FAQs" buttons are now available in **Edit Mode** for existing directories, not just during creation.
+- **Global FAQ Generation:** Reuses the `generateFAQs` Cloud Function but passes the directory's niche and location as a pseudo-listing object. Clicking "Save FAQs" persists them.
+- **Chatbot Database Check:** The `askDirectoryAssistant` (Homepage mode) strictly checks `d.status === 'published'` and uses the internal `d.directory` field for generating URLs. This prevents the AI from hallucinating broken links.
 
 ## STRICT AI RULES (V2.1)
 - **Niche Fields:** No location fields, no Yes/No toggles, no "Other" options, no Price fields.
@@ -68,12 +71,12 @@ To ensure a 100% smooth experience with zero downtime, all AI Cloud Functions no
 - **FAQ Generator (V1.9):** Exactly 3 Q&As. Must use only provided context. Must not invent facts. Output JSON only.
 - **Alt Text Generator (V1.9):** Max 15 words. Describe only what is visible. Output the alt text string only.
 
-## AI ASSISTANT (V2.1)
+## AI ASSISTANT (V2.2)
 - **Cloud Function:** `askDirectoryAssistant`.
 - **RAG System:** AI acts as a Retrieval-Augmented Generation assistant.
 - **Listing Mode:** Reads ONLY the specific listing's data. If the answer isn't there, it politely tells the user to call the business's phone number.
-- **Directory Mode:** Reads ALL listings in the directory AND related directories. Allows users to ask comparison questions (e.g., "Who has WiFi?", "Which is cheapest?", "Do you have a hospital in Hindi?").
-- **Homepage Mode (V2.1):** Reads ALL published directories to match global search intent. Takes natural language (e.g., "guest house") and matches it to database categories (e.g., "Guesthouses") to provide exact links.
+- **Directory Mode:** Reads ALL listings in the directory AND related directories. Allows users to ask comparison questions (e.g., "Who has WiFi?", "Which is cheapest?").
+- **Homepage Mode (V2.2):** Reads ALL published directories (`d.status === 'published'`) to match global search intent. Takes natural language (e.g., "guest house") and matches it to database categories. Uses the internal `d.directory` slug to output exact links.
 
 ## PRICE CATEGORIES
 Budget, Mid-range, Premium, Luxury — dropdown. Exact numeric price optional.
@@ -103,7 +106,7 @@ directory-dashboard/
 ├── js/utils.js — Slug generation, validation
 ├── js/form-engine.js — NICHE_FIELDS + calls both AI functions + saves fields + layout
 ├── js/image-upload.js — Direct upload with compression; auto alt-text helper (V1.9)
-├── js/directories.js — Directory management; hero + thumbnail alt-text buttons (V1.9)
+├── js/directories.js — Directory management; hero + thumbnail alt-text buttons, edit mode description & FAQ generation (V2.2)
 ├── js/listings.js — Listing form with summary/blog generators; AI FAQ button + listing-level alt-text buttons (V1.9)
 ├── js/business.js — Business pages with gallery
 ├── js/publish.js — Publish button
@@ -121,17 +124,17 @@ directory-dashboard/
 6. generateBlog — Generates blogs with niche tone rules
 7. askDirectoryAssistant — RAG AI assistant for the public website. Reads listing, directory, or homepage data to answer visitor questions.
 8. generateNicheLayout — Generates `directoryCard` and `listingPage` JSON layouts based on UX rules.
-9. **generateFAQs (V1.9)** — Generates exactly 3 Q&As per listing from summary + nicheSpecific + blog. JSON output.
-10. **generatePhotoAltText (V1.9)** — AI Vision. Generates ≤15-word SEO alt text from an image (base64 + mimeType).
+9. generateFAQs (V1.9) — Generates exactly 3 Q&As per listing from summary + nicheSpecific + blog. JSON output.
+10. generatePhotoAltText (V1.9) — AI Vision. Generates ≤15-word SEO alt text from an image (base64 + mimeType).
 
 ## BACKFILLING EXISTING NICHES
-If a niche was created before V1.8, it will not have a `layout`. You can run a one-time script in the browser console to generate layouts for all existing niches. (See the `backfillLayouts` script).
+If a niche was created before V1.8, it will not have a `layout`. You can run a one-time script in the browser console to generate layouts for all existing niches.
 
 ## SECURITY
 - Firestore rules: public read, write only authenticated admin
 - Collections: directories, businesses, nicheFields
 - Firebase Auth: single admin
-- **AI Keys:** Stored securely in Firebase Runtime Config (Gemini + DeepSeek). 
+- AI Keys: Stored securely in Firebase Runtime Config (Gemini + DeepSeek).
 
 ## WORKFLOW
 1. Login at admin-dashboard-dc821.web.app
