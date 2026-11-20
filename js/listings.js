@@ -34,20 +34,6 @@ async function showListingForm(directorySlug, listingId) {
         </select>
       </div>
       <div class="form-group">
-        <label>Price Category</label>
-        <select id="listingPriceCategory">
-          <option value="">-- Select --</option>
-          <option value="Budget" ${existingListing?.priceCategory === 'Budget' ? 'selected' : ''}>Budget</option>
-          <option value="Mid-range" ${existingListing?.priceCategory === 'Mid-range' ? 'selected' : ''}>Mid-range</option>
-          <option value="Premium" ${existingListing?.priceCategory === 'Premium' ? 'selected' : ''}>Premium</option>
-          <option value="Luxury" ${existingListing?.priceCategory === 'Luxury' ? 'selected' : ''}>Luxury</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Exact Price (optional)</label>
-        <input type="number" id="listingPrice" value="${existingListing?.priceNumeric || ''}" placeholder="e.g., 1500">
-      </div>
-      <div class="form-group">
         <label>Summary Description</label>
         <textarea id="listingSummary">${existingListing?.summary || ''}</textarea>
         <button class="btn-secondary" id="btnGenSummary" onclick="generateSummary()" style="width:auto; margin-top:0.5rem;">✨ Generate Summary</button>
@@ -162,10 +148,9 @@ async function generateSummary() {
     const name = document.getElementById('listingName').value.trim();
     const phoneDisplay = document.getElementById('listingPhone').value.trim();
     const directions = document.getElementById('listingDirections').value.trim();
-    const priceCategory = document.getElementById('listingPriceCategory').value;
     const nicheSpecific = window._nicheForm ? window._nicheForm.getValues() : {};
     const location = window._dirLocation || '';
-    const niche = window._dirNiche || priceCategory || 'business';
+    const niche = window._dirNiche || 'business';
 
     const nicheValues = Object.values(nicheSpecific).filter(v => 
       v !== undefined && v !== '' && v !== null && 
@@ -190,7 +175,6 @@ async function generateSummary() {
       location: location,
       phoneDisplay: phoneDisplay,
       directions: directions,
-      priceCategory: priceCategory,
       nicheSpecific: nicheSpecific
     };
 
@@ -213,17 +197,16 @@ async function generateBlogForListing(directorySlug) {
     const summary = document.getElementById('listingSummary').value.trim();
     const phoneDisplay = document.getElementById('listingPhone').value.trim();
     const directions = document.getElementById('listingDirections').value.trim();
-    const priceCategory = document.getElementById('listingPriceCategory').value;
     const nicheSpecific = window._nicheForm ? window._nicheForm.getValues() : {};
     const keyword = document.getElementById('blogKeyword').value.trim();
     const standout = document.getElementById('blogStandout').value.trim();
     const ownerStory = document.getElementById('blogOwnerStory').value.trim();
     const location = window._dirLocation || '';
-    const niche = window._dirNiche || priceCategory || 'business';
+    const niche = window._dirNiche || 'business';
 
     const listingData = {
       name: name, summary: summary, phoneDisplay: phoneDisplay,
-      directions: directions, priceCategory: priceCategory, nicheSpecific: nicheSpecific,
+      directions: directions, nicheSpecific: nicheSpecific,
       targetKeyword: keyword, standoutFeature: standout, ownerStory: ownerStory,
       location: location, niche: niche, directorySlug: directorySlug
     };
@@ -255,13 +238,12 @@ async function generateFAQsForListing(directorySlug) {
     const summary = document.getElementById('listingSummary').value.trim();
     const phoneDisplay = document.getElementById('listingPhone').value.trim();
     const directions = document.getElementById('listingDirections').value.trim();
-    const priceCategory = document.getElementById('listingPriceCategory').value;
     const nicheSpecific = window._nicheForm ? window._nicheForm.getValues() : {};
     const blogTitle = document.getElementById('blogTitle').value.trim();
     const blogExcerpt = document.getElementById('blogExcerpt').value.trim();
     const blogBody = document.getElementById('blogBody').value.trim();
     const location = window._dirLocation || '';
-    const niche = window._dirNiche || priceCategory || 'business';
+    const niche = window._dirNiche || 'business';
 
     if (!name) {
       if (btn) { btn.disabled = false; btn.textContent = '✨ Generate FAQs with AI'; }
@@ -270,7 +252,7 @@ async function generateFAQsForListing(directorySlug) {
 
     const listingData = {
       name: name, summary: summary, phoneDisplay: phoneDisplay,
-      directions: directions, priceCategory: priceCategory, nicheSpecific: nicheSpecific,
+      directions: directions, nicheSpecific: nicheSpecific,
       blog: { title: blogTitle || '', excerpt: blogExcerpt || '', body: blogBody || '' },
       location: location, niche: niche, directorySlug: directorySlug
     };
@@ -426,8 +408,6 @@ async function saveListing(directorySlug, listingId) {
   try {
     const name = document.getElementById('listingName').value.trim();
     const verified = document.getElementById('listingVerified').value === 'true';
-    const priceCategory = document.getElementById('listingPriceCategory').value;
-    const priceNumeric = parseFloat(document.getElementById('listingPrice').value) || 0;
     const summary = document.getElementById('listingSummary').value.trim();
     const phoneDisplay = document.getElementById('listingPhone').value.trim();
     const phone = formatPhoneInternational(phoneDisplay);
@@ -454,7 +434,7 @@ async function saveListing(directorySlug, listingId) {
     const existingThumbnail = window._existingThumbnail || '';
 
     const listingData = {
-      id: id, name: name, slug: slug, verified: verified, priceCategory: priceCategory, priceNumeric: priceNumeric,
+      id: id, name: name, slug: slug, verified: verified,
       summary: summary, thumbnail: existingThumbnail, thumbnailAlt: photoAlt, thumbnailStatus: 'ready',
       phone: phone, phoneDisplay: phoneDisplay, whatsapp: whatsapp, whatsappMessage: whatsappMessage,
       directions: directions, coordinates: { lat: lat, lng: lng }, faqs: [], gallery: gallery,

@@ -305,7 +305,7 @@ exports.generateBlog = functions.https.onCall(async (data, context) => {
   const keyword = listingData.targetKeyword || '';
   const standout = listingData.standoutFeature || '';
   const ownerStory = listingData.ownerStory || '';
-  const niche = listingData.priceCategory || listingData.niche || 'business';
+  const niche = listingData.niche || 'business';
 
   const prompt = 'You are an expert local SEO copywriter and directory content strategist specializing in Kenyan local business reviews. Your sole purpose is to generate highly authoritative, helpful, human-first directory blog posts that dominate Google\'s E-E-A-T ranking guidelines.\n\nYou will be provided with specific local business details from a dashboard form. You must weave these details naturally into a compelling article without sounding robotic, mechanical, or repetitive.\n\nCRITICAL OUTPUT FORMATTING RULES:\n1. Separate output into exactly three clearly labeled sections: [BLOG TITLE], [BLOG EXCERPT], and [BLOG BODY].\n2. [BLOG TITLE]: Single, punchy, SEO-optimized title that MUST include the target keyword.\n3. [BLOG EXCERPT]: Brief, engaging 2-to-3 sentence summary under 160 characters. No markdown.\n4. [BLOG BODY]: Main article in clean Markdown (## for subheadings). Target 400-600 words.\n\nKEYWORD RULES:\n- The target keyword is "' + keyword + '". Use it naturally in the title, within the first 100 words, and once in a subheading. Do not stuff.\n\nSTANDOUT FEATURE RULES:\n- The standout feature is "' + standout + '". Anchor the article around this — make it the primary reason this business serves the community.\n\nOWNER STORY RULES:\n- The owner story is "' + ownerStory + '". Weave this into the narrative naturally as a human element. If empty, skip.\n\nNICHE TONE RULES:\n- This is a "' + niche + '" business. Match the tone accordingly.\n- Health/Medical/Clinic/Hospital: Professional, authoritative, factual. Reference services and qualifications. Never give medical advice. Calm and reassuring tone.\n- School/Education/College: Informative, institutional, community-focused. Reference curriculum and facilities. Trust-building tone.\n- Financial/Legal: Formal, precise, trustworthy. Reference compliance and credentials.\n- Guesthouse/Hotel/Apartment: Warm, descriptive, experience-driven. Use sensory details.\n- Nightclub/Bar/Restaurant: Energetic, exciting, experience-focused. Reference music, atmosphere, food, events.\n- Supermarket/Shop/Retail: Practical, value-focused, factual. Reference products, prices, convenience.\n- Salon/Gym/Car Wash/Service: Personal, experience-driven, results-focused. Reference skills, equipment, transformations.\n\nANTI-ROBOTIC RULES:\n- Write in third person as an experienced local guide. Never use "I", "me", "my", "we", "our". Use phrases like "Visitors will find", "The guesthouse offers", "Located near", "Guests can expect".\n- Use Kenyan context: matatu stages, boda boda shades, chai, M-Pesa.\n- Rely strictly on facts provided. No invented statistics or names.\n- Be honest. Mention minor drawbacks.\n- End with a practical verdict.\n- Do NOT use phrases: "look no further", "nestled in the heart of", "testament to", "moreover", "furthermore", "delve", "in conclusion".\n- No exclamation points.\n\nUNIQUENESS RULES:\n- Every article must feel distinct.\n- Vary structure based on standout feature, landmarks, and owner story.\n- Match structure to niche.\n\nBUSINESS DETAILS:\n' + JSON.stringify(listingData, null, 2) + '\n\nGenerate the blog now. Output ONLY the three sections with their labels.';
 
@@ -382,8 +382,6 @@ RULES:
     const listingsContext = (directoryData.listings || []).map((l, idx) => {
       return `Listing ${idx + 1}:
 - Name: ${l.name}
-- Price Category: ${l.priceCategory || 'N/A'}
-- Exact Price: ${l.priceNumeric || 'N/A'}
 - Summary: ${l.summary || 'N/A'}
 - Amenities/Services: ${JSON.stringify(l.nicheSpecific || {})}
 - Phone: ${l.phoneDisplay || l.phone || 'N/A'}`;
@@ -401,7 +399,7 @@ ${relatedContext ? `OTHER BUSINESS CATEGORIES IN THIS LOCATION:\n${relatedContex
 VISITOR QUESTION: ${question}
 RULES:
 1. You must answer using ONLY the context provided above.
-2. If the user asks to compare, find the cheapest, or find a specific amenity, you MUST read the listings above and give a recommendation based on the data.
+2. If the user asks to compare or find a specific amenity, you MUST read the listings above and give a recommendation based on the data.
 3. If the user asks for a DIFFERENT type of business (e.g., a hospital), check the "OTHER BUSINESS CATEGORIES" list above. If it exists, tell them it is available and provide the category name.
 4. Do NOT invent or guess any information not in the context above.
 5. If the answer is NOT found in the context or the related categories, respond with:
@@ -484,19 +482,19 @@ exports.generateNicheLayout = functions.https.onCall(async (data, context) => {
 
   const prompt = `You are a Master UI/UX Architect. Your job is to generate a strict JSON layout for a "${nicheName}" directory listing page and card, based on the following UX Philosophy.
 THE GOLDEN RULES OF KE DIRECTORY:
-1. HUMAN TASK FIRST: Structure by user intent: ORIENT (What is this?) -> DECIDE (How much? What does it offer?) -> ACT (Call/WhatsApp) -> DEEPEN (Blog/FAQs).
+1. HUMAN TASK FIRST: Structure by user intent: ORIENT (What is this?) -> DECIDE (What does it offer?) -> ACT (Call/WhatsApp) -> DEEPEN (Blog/FAQs).
 2. UNKNOWN MEANS NO: If a field is empty or unknown, it must be hidden. 
-3. DECISION FACTS UP TOP: Price, core amenities, and major differentiators must be visible immediately. 
+3. DECISION FACTS UP TOP: Core amenities and major differentiators must be visible immediately. 
 4. PROGRESSIVE DISCLOSURE: Long blogs, deep descriptions, and FAQs go at the very bottom.
-5. DIRECTORY CARDS: Must be compact. Only include: Image, Name, Price, and 2-3 key differentiators. No long paragraphs.
+5. DIRECTORY CARDS: Must be compact. Only include: Image, Name, and 2-3 key differentiators. No long paragraphs. Do NOT include price.
 THE AVAILABLE FIELDS FOR THIS NICHE ARE:
 ${JSON.stringify(fields, null, 2)}
 YOUR TASK:
 Generate a JSON object with two keys: "directoryCard" and "listingPage".
-"directoryCard": An array of max 5 field keys to display on the directory page card. Must include: "thumbnail", "name", "priceCategory", and 2-3 dynamic fields from the list above that best define this niche. Do NOT include more than 5 fields.
+"directoryCard": An array of max 5 field keys to display on the directory page card. Must include: "thumbnail", "name", and 2-3 dynamic fields from the list above that best define this niche. Do NOT include more than 5 fields.
 "listingPage": An array of section objects. Allowed sections:
 - "hero" (thumbnail, name, summary, verified badge)
-- "decision_facts" (price, and 2-3 core dynamic fields from the list)
+- "decision_facts" (2-3 core dynamic fields from the list)
 - "primary_actions" (phone, whatsapp, directions)
 - "details_table" (specific stats like check-in, opening hours, etc from the list)
 - "amenities" (dynamic fields, features from the list)
@@ -504,10 +502,10 @@ Generate a JSON object with two keys: "directoryCard" and "listingPage".
 - "deep_content" (blog, faqs)
 CRITICAL: You MUST output ONLY valid JSON. Do not include markdown or explanations. Format exactly like this:
 {
-  "directoryCard": ["thumbnail", "name", "priceCategory", "field1", "field2"],
+  "directoryCard": ["thumbnail", "name", "field1", "field2"],
   "listingPage": [
     { "section": "hero", "fields": ["thumbnail", "name", "summary"] },
-    { "section": "decision_facts", "fields": ["priceCategory", "field1", "field2"] },
+    { "section": "decision_facts", "fields": ["field1", "field2"] },
     { "section": "primary_actions", "fields": [] },
     { "section": "deep_content", "fields": ["blog", "faqs"] }
   ]
